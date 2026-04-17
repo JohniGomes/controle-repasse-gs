@@ -305,6 +305,34 @@ function renderCharts() {
   renderChartProcedimento();
 }
 
+// Helper: gera opções de legenda com valor + % embutidos nos itens
+function doughnutLegend(rawData, total, colors) {
+  return {
+    position: 'bottom',
+    labels: {
+      generateLabels(chart) {
+        return chart.data.labels.map((label, i) => {
+          const v   = chart.data.datasets[0].data[i];
+          const pct = total > 0 ? (v / total * 100).toFixed(1) : '0.0';
+          return {
+            text:        `${label}   ${formatCurrency(v)}  (${pct}%)`,
+            fillStyle:   colors[i] || '#ccc',
+            strokeStyle: colors[i] || '#ccc',
+            lineWidth:   0,
+            hidden:      false,
+            index:       i,
+            pointStyle:  'circle'
+          };
+        });
+      },
+      usePointStyle: true,
+      font:    { family: 'Poppins', size: 11 },
+      padding: 16,
+      boxWidth: 10
+    }
+  };
+}
+
 // ── 1. Particular vs Convênio (Doughnut) ─────────────────────
 function renderChartTipo() {
   const grupos = {};
@@ -312,25 +340,18 @@ function renderChartTipo() {
   const labels = Object.keys(grupos);
   const data   = labels.map(k => grupos[k]);
   const total  = data.reduce((s, v) => s + v, 0);
+  const colors = ['#1a56db', '#0ea5a0'];
 
   chartInstances.tipo = new Chart(document.getElementById('chartTipo'), {
     type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{ data, backgroundColor: ['#1a56db','#0ea5a0'], borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }]
-    },
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }] },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '62%',
-      layout: { padding: 30 },
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      layout: { padding: { top: 10, bottom: 4, left: 10, right: 10 } },
       plugins: {
-        legend: LEGEND_TOP,
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)}` } },
-        datalabels: {
-          anchor: 'end', align: 'end', offset: 6,
-          color: '#1a202c',
-          font: { family: 'Poppins', size: 10, weight: '700' },
-          formatter: (v) => `${formatCurrency(v)}\n${total > 0 ? (v/total*100).toFixed(1)+'%' : ''}`
-        }
+        legend:     doughnutLegend(data, total, colors),
+        tooltip:    { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${total > 0 ? (ctx.raw/total*100).toFixed(1) : 0}%)` } },
+        datalabels: { display: false }
       }
     }
   });
@@ -341,25 +362,19 @@ function renderChartRepasse() {
   const totalRep = filteredLancamentos.reduce((s, l) => s + Number(l.repasse), 0);
   const totalVal = filteredLancamentos.reduce((s, l) => s + Number(l.valor),   0);
   const clinica  = Math.max(0, totalVal - totalRep);
+  const data     = [totalRep, clinica];
+  const colors   = ['#0ea5a0', '#1a56db'];
 
   chartInstances.repasse = new Chart(document.getElementById('chartRepasse'), {
     type: 'doughnut',
-    data: {
-      labels: ['Dentista', 'Clínica'],
-      datasets: [{ data: [totalRep, clinica], backgroundColor: ['#0ea5a0','#1a56db'], borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }]
-    },
+    data: { labels: ['Dentista', 'Clínica'], datasets: [{ data, backgroundColor: colors, borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }] },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '62%',
-      layout: { padding: 30 },
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      layout: { padding: { top: 10, bottom: 4, left: 10, right: 10 } },
       plugins: {
-        legend: LEGEND_TOP,
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw/totalVal*100).toFixed(1) : 0}%)` } },
-        datalabels: {
-          anchor: 'end', align: 'end', offset: 6,
-          color: '#1a202c',
-          font: { family: 'Poppins', size: 10, weight: '700' },
-          formatter: (v) => `${formatCurrency(v)}\n${totalVal > 0 ? (v/totalVal*100).toFixed(1)+'%' : ''}`
-        }
+        legend:     doughnutLegend(data, totalVal, colors),
+        tooltip:    { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw/totalVal*100).toFixed(1) : 0}%)` } },
+        datalabels: { display: false }
       }
     }
   });
@@ -370,17 +385,18 @@ function renderChartConvenio() {
   const convData = filteredLancamentos.filter(l => l.tipo === 'Convênio');
   const grupos   = {};
   convData.forEach(l => { const k = l.convenio || 'Sem nome'; grupos[k] = (grupos[k] || 0) + Number(l.repasse); });
-  const labels   = Object.keys(grupos);
-  const data     = labels.map(k => grupos[k]);
-  const total    = data.reduce((s, v) => s + v, 0);
-  const isDough  = labels.length <= 5;
+  const labels  = Object.keys(grupos);
+  const data    = labels.map(k => grupos[k]);
+  const total   = data.reduce((s, v) => s + v, 0);
+  const colors  = CHART_PALETTE.slice(0, labels.length);
+  const isDough = labels.length <= 5;
 
   if (!labels.length) {
     chartInstances.convenio = new Chart(document.getElementById('chartConvenio'), {
       type: 'doughnut',
       data: { labels: ['Sem convênios'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }] },
       options: {
-        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
         plugins: { legend: { display: false }, datalabels: { display: false } }
       }
     });
@@ -393,22 +409,22 @@ function renderChartConvenio() {
       labels,
       datasets: [{
         label: 'Repasse', data,
-        backgroundColor: CHART_PALETTE.slice(0, labels.length),
+        backgroundColor: colors,
         borderWidth: isDough ? 3 : 0, borderColor: '#fff',
         borderRadius: isDough ? 0 : 6, hoverOffset: 6
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      cutout: isDough ? '62%' : undefined,
-      layout: isDough ? { padding: 30 } : { padding: { top: 28 } },
+      cutout: isDough ? '65%' : undefined,
+      layout: isDough
+        ? { padding: { top: 10, bottom: 4, left: 10, right: 10 } }
+        : { padding: { top: 28 } },
       plugins: {
-        legend: { ...LEGEND_TOP, display: isDough },
+        legend:  isDough ? doughnutLegend(data, total, colors) : { display: false },
         tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } },
         datalabels: isDough
-          ? { anchor: 'end', align: 'end', offset: 6, color: '#1a202c',
-              font: { family: 'Poppins', size: 10, weight: '700' },
-              formatter: v => `${formatCurrency(v)}\n${total > 0 ? (v/total*100).toFixed(1)+'%' : ''}` }
+          ? { display: false }
           : { ...DL_CURRENCY, anchor: 'end', align: 'top', offset: 2 }
       },
       scales: isDough ? undefined : {

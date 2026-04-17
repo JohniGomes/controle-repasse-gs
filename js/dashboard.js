@@ -289,17 +289,19 @@ function showLoader(show) {
 
 // ── Charts ────────────────────────────────────────────────────
 
+Chart.register(ChartDataLabels);
+
 const CHART_PALETTE = ['#1a56db','#0ea5a0','#16a34a','#f97316','#7c3aed','#ec4899','#eab308','#0284c7','#dc2626','#65a30d'];
 
-const BASE_OPTS = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: { font: { family: 'Poppins', size: 11 }, padding: 14, boxWidth: 12 }
-    }
-  }
+const LEGEND_OPTS = {
+  position: 'bottom',
+  labels: { font: { family: 'Poppins', size: 11 }, padding: 14, boxWidth: 12 }
+};
+
+const DL_CURRENCY = {
+  font: { family: 'Poppins', size: 10, weight: '700' },
+  color: '#1a202c',
+  formatter: v => formatCurrency(v)
 };
 
 function destroyCharts() {
@@ -312,7 +314,6 @@ function renderCharts() {
   const section = document.getElementById('chartsSection');
   if (!filteredLancamentos.length) { section.style.display = 'none'; return; }
   section.style.display = '';
-
   renderChartTipo();
   renderChartRepasse();
   renderChartConvenio();
@@ -323,26 +324,28 @@ function renderCharts() {
 // ── 1. Particular vs Convênio (Doughnut) ─────────────────────
 function renderChartTipo() {
   const grupos = {};
-  filteredLancamentos.forEach(l => {
-    grupos[l.tipo] = (grupos[l.tipo] || 0) + Number(l.repasse);
-  });
+  filteredLancamentos.forEach(l => { grupos[l.tipo] = (grupos[l.tipo] || 0) + Number(l.repasse); });
   const labels = Object.keys(grupos);
+  const data   = labels.map(k => grupos[k]);
+  const total  = data.reduce((s, v) => s + v, 0);
+
   chartInstances.tipo = new Chart(document.getElementById('chartTipo'), {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{
-        data: labels.map(k => grupos[k]),
-        backgroundColor: ['#1a56db', '#0ea5a0'],
-        borderWidth: 3, borderColor: '#fff', hoverOffset: 6
-      }]
+      datasets: [{ data, backgroundColor: ['#1a56db','#0ea5a0'], borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }]
     },
     options: {
-      ...BASE_OPTS,
-      cutout: '68%',
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
       plugins: {
-        ...BASE_OPTS.plugins,
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)}` } }
+        legend: LEGEND_OPTS,
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)}` } },
+        datalabels: {
+          color: '#fff',
+          font: { family: 'Poppins', size: 11, weight: '700' },
+          textAlign: 'center',
+          formatter: (v) => `${formatCurrency(v)}\n${total > 0 ? (v/total*100).toFixed(1)+'%' : ''}`
+        }
       }
     }
   });
@@ -353,72 +356,83 @@ function renderChartRepasse() {
   const totalRep = filteredLancamentos.reduce((s, l) => s + Number(l.repasse), 0);
   const totalVal = filteredLancamentos.reduce((s, l) => s + Number(l.valor),   0);
   const clinica  = Math.max(0, totalVal - totalRep);
-  const pct      = totalVal > 0 ? (totalRep / totalVal * 100).toFixed(1) : 0;
 
   chartInstances.repasse = new Chart(document.getElementById('chartRepasse'), {
     type: 'doughnut',
     data: {
-      labels: [`Dentista (${pct}%)`, 'Clínica'],
-      datasets: [{
-        data: [totalRep, clinica],
-        backgroundColor: ['#0ea5a0', '#1a56db'],
-        borderWidth: 3, borderColor: '#fff', hoverOffset: 6
-      }]
+      labels: ['Dentista', 'Clínica'],
+      datasets: [{ data: [totalRep, clinica], backgroundColor: ['#0ea5a0','#1a56db'], borderWidth: 3, borderColor: '#fff', hoverOffset: 6 }]
     },
     options: {
-      ...BASE_OPTS,
-      cutout: '68%',
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
       plugins: {
-        ...BASE_OPTS.plugins,
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw / totalVal * 100).toFixed(1) : 0}%)`
-          }
+        legend: LEGEND_OPTS,
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw/totalVal*100).toFixed(1) : 0}%)` } },
+        datalabels: {
+          color: '#fff',
+          font: { family: 'Poppins', size: 11, weight: '700' },
+          textAlign: 'center',
+          formatter: (v) => `${formatCurrency(v)}\n${totalVal > 0 ? (v/totalVal*100).toFixed(1)+'%' : ''}`
         }
       }
     }
   });
 }
 
-// ── 3. Repasse por Convênio (Bar) ─────────────────────────────
+// ── 3. Repasse por Convênio (Doughnut ≤5 / Bar >5) ───────────
 function renderChartConvenio() {
   const convData = filteredLancamentos.filter(l => l.tipo === 'Convênio');
   const grupos   = {};
   convData.forEach(l => { const k = l.convenio || 'Sem nome'; grupos[k] = (grupos[k] || 0) + Number(l.repasse); });
-  const labels = Object.keys(grupos);
-  const data   = labels.map(k => grupos[k]);
+  const labels   = Object.keys(grupos);
+  const data     = labels.map(k => grupos[k]);
+  const total    = data.reduce((s, v) => s + v, 0);
+  const isDough  = labels.length <= 5;
+
+  if (!labels.length) {
+    chartInstances.convenio = new Chart(document.getElementById('chartConvenio'), {
+      type: 'doughnut',
+      data: { labels: ['Sem convênios'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { display: false }, datalabels: { display: false } }
+      }
+    });
+    return;
+  }
 
   chartInstances.convenio = new Chart(document.getElementById('chartConvenio'), {
-    type: labels.length <= 5 ? 'doughnut' : 'bar',
+    type: isDough ? 'doughnut' : 'bar',
     data: {
-      labels: labels.length ? labels : ['Sem convênios'],
+      labels,
       datasets: [{
-        label: 'Repasse',
-        data: data.length ? data : [0],
-        backgroundColor: CHART_PALETTE.slice(0, Math.max(labels.length, 1)),
-        borderWidth: labels.length <= 5 ? 3 : 0,
-        borderColor: '#fff',
-        borderRadius: labels.length > 5 ? 5 : 0,
-        hoverOffset: 6
+        label: 'Repasse', data,
+        backgroundColor: CHART_PALETTE.slice(0, labels.length),
+        borderWidth: isDough ? 3 : 0, borderColor: '#fff',
+        borderRadius: isDough ? 0 : 6, hoverOffset: 6
       }]
     },
     options: {
-      ...BASE_OPTS,
-      cutout: labels.length <= 5 ? '68%' : undefined,
+      responsive: true, maintainAspectRatio: false,
+      cutout: isDough ? '62%' : undefined,
+      layout: isDough ? undefined : { padding: { top: 28 } },
       plugins: {
-        ...BASE_OPTS.plugins,
-        legend: { ...BASE_OPTS.plugins.legend, display: labels.length <= 5 },
-        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } }
+        legend: { ...LEGEND_OPTS, display: isDough },
+        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } },
+        datalabels: isDough
+          ? { color: '#fff', font: { family: 'Poppins', size: 11, weight: '700' }, textAlign: 'center',
+              formatter: v => `${formatCurrency(v)}\n${total > 0 ? (v/total*100).toFixed(1)+'%' : ''}` }
+          : { ...DL_CURRENCY, anchor: 'end', align: 'top', offset: 2 }
       },
-      scales: labels.length > 5 ? {
-        y: { ticks: { callback: v => 'R$' + v, font: { family: 'Poppins', size: 10 } }, grid: { color: '#f0f4ff' } },
+      scales: isDough ? undefined : {
+        y: { display: false },
         x: { ticks: { font: { family: 'Poppins', size: 10 } }, grid: { display: false } }
-      } : undefined
+      }
     }
   });
 }
 
-// ── 4. Repasse por Dentista (Bar) ─────────────────────────────
+// ── 4. Repasse por Dentista (Bar vertical) ────────────────────
 function renderChartDentista() {
   const grupos = {};
   filteredLancamentos.forEach(l => { grupos[l.dentista] = (grupos[l.dentista] || 0) + Number(l.repasse); });
@@ -430,28 +444,25 @@ function renderChartDentista() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Total Repasse',
-        data,
-        backgroundColor: CHART_PALETTE.slice(0, labels.length),
-        borderRadius: 6, borderSkipped: false
-      }]
+      datasets: [{ label: 'Repasse', data, backgroundColor: CHART_PALETTE.slice(0, labels.length), borderRadius: 6, borderSkipped: false }]
     },
     options: {
-      ...BASE_OPTS,
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 28 } },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } }
+        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } },
+        datalabels: { ...DL_CURRENCY, anchor: 'end', align: 'top', offset: 2 }
       },
       scales: {
-        y: { ticks: { callback: v => 'R$' + v, font: { family: 'Poppins', size: 10 } }, grid: { color: '#f0f4ff' } },
+        y: { display: false },
         x: { ticks: { font: { family: 'Poppins', size: 10 } }, grid: { display: false } }
       }
     }
   });
 }
 
-// ── 5. Top Procedimentos por Repasse (Horizontal Bar) ─────────
+// ── 5. Top Procedimentos (Horizontal Bar) ────────────────────
 function renderChartProcedimento() {
   const grupos = {};
   filteredLancamentos.forEach(l => { grupos[l.procedimento] = (grupos[l.procedimento] || 0) + Number(l.repasse); });
@@ -463,22 +474,19 @@ function renderChartProcedimento() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Repasse',
-        data,
-        backgroundColor: '#1a56db',
-        borderRadius: 4, borderSkipped: false
-      }]
+      datasets: [{ label: 'Repasse', data, backgroundColor: '#1a56db', borderRadius: 4, borderSkipped: false }]
     },
     options: {
-      ...BASE_OPTS,
+      responsive: true, maintainAspectRatio: false,
       indexAxis: 'y',
+      layout: { padding: { right: 85 } },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } }
+        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } },
+        datalabels: { ...DL_CURRENCY, anchor: 'end', align: 'right', offset: 6, clip: false }
       },
       scales: {
-        x: { ticks: { callback: v => 'R$' + v, font: { family: 'Poppins', size: 10 } }, grid: { color: '#f0f4ff' } },
+        x: { display: false },
         y: { ticks: { font: { family: 'Poppins', size: 9 } }, grid: { display: false } }
       }
     }

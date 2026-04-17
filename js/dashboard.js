@@ -6,6 +6,7 @@ let allLancamentos = [];
 let filteredLancamentos = [];
 let dentistasDB = [];
 let conveniosDB = [];
+let chartInstances = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
@@ -121,8 +122,9 @@ function applyFilters() {
     return true;
   });
 
-renderSummary();
+  renderSummary();
   renderTable();
+  renderCharts();
 }
 
 function clearFilters() {
@@ -283,4 +285,202 @@ function exportPDF() {
 
 function showLoader(show) {
   document.getElementById('pageLoader').style.display = show ? 'flex' : 'none';
+}
+
+// ── Charts ────────────────────────────────────────────────────
+
+const CHART_PALETTE = ['#1a56db','#0ea5a0','#16a34a','#f97316','#7c3aed','#ec4899','#eab308','#0284c7','#dc2626','#65a30d'];
+
+const BASE_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: { font: { family: 'Poppins', size: 11 }, padding: 14, boxWidth: 12 }
+    }
+  }
+};
+
+function destroyCharts() {
+  Object.values(chartInstances).forEach(c => c && c.destroy());
+  chartInstances = {};
+}
+
+function renderCharts() {
+  destroyCharts();
+  const section = document.getElementById('chartsSection');
+  if (!filteredLancamentos.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  renderChartTipo();
+  renderChartRepasse();
+  renderChartConvenio();
+  renderChartDentista();
+  renderChartProcedimento();
+}
+
+// ── 1. Particular vs Convênio (Doughnut) ─────────────────────
+function renderChartTipo() {
+  const grupos = {};
+  filteredLancamentos.forEach(l => {
+    grupos[l.tipo] = (grupos[l.tipo] || 0) + Number(l.repasse);
+  });
+  const labels = Object.keys(grupos);
+  chartInstances.tipo = new Chart(document.getElementById('chartTipo'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: labels.map(k => grupos[k]),
+        backgroundColor: ['#1a56db', '#0ea5a0'],
+        borderWidth: 3, borderColor: '#fff', hoverOffset: 6
+      }]
+    },
+    options: {
+      ...BASE_OPTS,
+      cutout: '68%',
+      plugins: {
+        ...BASE_OPTS.plugins,
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)}` } }
+      }
+    }
+  });
+}
+
+// ── 2. Repasse vs Receita Clínica (Doughnut) ─────────────────
+function renderChartRepasse() {
+  const totalRep = filteredLancamentos.reduce((s, l) => s + Number(l.repasse), 0);
+  const totalVal = filteredLancamentos.reduce((s, l) => s + Number(l.valor),   0);
+  const clinica  = Math.max(0, totalVal - totalRep);
+  const pct      = totalVal > 0 ? (totalRep / totalVal * 100).toFixed(1) : 0;
+
+  chartInstances.repasse = new Chart(document.getElementById('chartRepasse'), {
+    type: 'doughnut',
+    data: {
+      labels: [`Dentista (${pct}%)`, 'Clínica'],
+      datasets: [{
+        data: [totalRep, clinica],
+        backgroundColor: ['#0ea5a0', '#1a56db'],
+        borderWidth: 3, borderColor: '#fff', hoverOffset: 6
+      }]
+    },
+    options: {
+      ...BASE_OPTS,
+      cutout: '68%',
+      plugins: {
+        ...BASE_OPTS.plugins,
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw / totalVal * 100).toFixed(1) : 0}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── 3. Repasse por Convênio (Bar) ─────────────────────────────
+function renderChartConvenio() {
+  const convData = filteredLancamentos.filter(l => l.tipo === 'Convênio');
+  const grupos   = {};
+  convData.forEach(l => { const k = l.convenio || 'Sem nome'; grupos[k] = (grupos[k] || 0) + Number(l.repasse); });
+  const labels = Object.keys(grupos);
+  const data   = labels.map(k => grupos[k]);
+
+  chartInstances.convenio = new Chart(document.getElementById('chartConvenio'), {
+    type: labels.length <= 5 ? 'doughnut' : 'bar',
+    data: {
+      labels: labels.length ? labels : ['Sem convênios'],
+      datasets: [{
+        label: 'Repasse',
+        data: data.length ? data : [0],
+        backgroundColor: CHART_PALETTE.slice(0, Math.max(labels.length, 1)),
+        borderWidth: labels.length <= 5 ? 3 : 0,
+        borderColor: '#fff',
+        borderRadius: labels.length > 5 ? 5 : 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      ...BASE_OPTS,
+      cutout: labels.length <= 5 ? '68%' : undefined,
+      plugins: {
+        ...BASE_OPTS.plugins,
+        legend: { ...BASE_OPTS.plugins.legend, display: labels.length <= 5 },
+        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } }
+      },
+      scales: labels.length > 5 ? {
+        y: { ticks: { callback: v => 'R$' + v, font: { family: 'Poppins', size: 10 } }, grid: { color: '#f0f4ff' } },
+        x: { ticks: { font: { family: 'Poppins', size: 10 } }, grid: { display: false } }
+      } : undefined
+    }
+  });
+}
+
+// ── 4. Repasse por Dentista (Bar) ─────────────────────────────
+function renderChartDentista() {
+  const grupos = {};
+  filteredLancamentos.forEach(l => { grupos[l.dentista] = (grupos[l.dentista] || 0) + Number(l.repasse); });
+  const sorted = Object.entries(grupos).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(([k]) => k);
+  const data   = sorted.map(([, v]) => v);
+
+  chartInstances.dentista = new Chart(document.getElementById('chartDentista'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total Repasse',
+        data,
+        backgroundColor: CHART_PALETTE.slice(0, labels.length),
+        borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      ...BASE_OPTS,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } }
+      },
+      scales: {
+        y: { ticks: { callback: v => 'R$' + v, font: { family: 'Poppins', size: 10 } }, grid: { color: '#f0f4ff' } },
+        x: { ticks: { font: { family: 'Poppins', size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── 5. Top Procedimentos por Repasse (Horizontal Bar) ─────────
+function renderChartProcedimento() {
+  const grupos = {};
+  filteredLancamentos.forEach(l => { grupos[l.procedimento] = (grupos[l.procedimento] || 0) + Number(l.repasse); });
+  const sorted = Object.entries(grupos).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const labels = sorted.map(([k]) => k);
+  const data   = sorted.map(([, v]) => v);
+
+  chartInstances.procedimento = new Chart(document.getElementById('chartProcedimento'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Repasse',
+        data,
+        backgroundColor: '#1a56db',
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      ...BASE_OPTS,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } }
+      },
+      scales: {
+        x: { ticks: { callback: v => 'R$' + v, font: { family: 'Poppins', size: 10 } }, grid: { color: '#f0f4ff' } },
+        y: { ticks: { font: { family: 'Poppins', size: 9 } }, grid: { display: false } }
+      }
+    }
+  });
 }

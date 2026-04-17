@@ -121,16 +121,7 @@ function applyFilters() {
     return true;
   });
 
-  // DEBUG — remova após confirmar que está funcionando
-  if (allLancamentos.length > 0 && filteredLancamentos.length === 0) {
-    const l0 = allLancamentos[0];
-    showToast(
-      `DEBUG: total=${allLancamentos.length} | dentFiltro="${dentista}" | dentDado="${l0.dentista}" | dataDado="${l0.data}" | mesFiltro="${m}" | periodo="${activePeriod}"`,
-      'warning'
-    );
-  }
-
-  renderSummary();
+renderSummary();
   renderTable();
 }
 

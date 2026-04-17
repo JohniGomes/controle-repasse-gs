@@ -316,13 +316,14 @@ function renderChartTipo() {
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
+      layout: { padding: 30 },
       plugins: {
         legend: LEGEND_OPTS,
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)}` } },
         datalabels: {
-          color: '#fff',
-          font: { family: 'Poppins', size: 11, weight: '700' },
-          textAlign: 'center',
+          anchor: 'end', align: 'end', offset: 6,
+          color: '#1a202c',
+          font: { family: 'Poppins', size: 10, weight: '700' },
           formatter: (v) => `${formatCurrency(v)}\n${total > 0 ? (v/total*100).toFixed(1)+'%' : ''}`
         }
       }
@@ -344,13 +345,14 @@ function renderChartRepasse() {
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
+      layout: { padding: 30 },
       plugins: {
         legend: LEGEND_OPTS,
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw/totalVal*100).toFixed(1) : 0}%)` } },
         datalabels: {
-          color: '#fff',
-          font: { family: 'Poppins', size: 11, weight: '700' },
-          textAlign: 'center',
+          anchor: 'end', align: 'end', offset: 6,
+          color: '#1a202c',
+          font: { family: 'Poppins', size: 10, weight: '700' },
           formatter: (v) => `${formatCurrency(v)}\n${totalVal > 0 ? (v/totalVal*100).toFixed(1)+'%' : ''}`
         }
       }
@@ -394,12 +396,13 @@ function renderChartConvenio() {
     options: {
       responsive: true, maintainAspectRatio: false,
       cutout: isDough ? '62%' : undefined,
-      layout: isDough ? undefined : { padding: { top: 28 } },
+      layout: isDough ? { padding: 30 } : { padding: { top: 28 } },
       plugins: {
         legend: { ...LEGEND_OPTS, display: isDough },
         tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } },
         datalabels: isDough
-          ? { color: '#fff', font: { family: 'Poppins', size: 11, weight: '700' }, textAlign: 'center',
+          ? { anchor: 'end', align: 'end', offset: 6, color: '#1a202c',
+              font: { family: 'Poppins', size: 10, weight: '700' },
               formatter: v => `${formatCurrency(v)}\n${total > 0 ? (v/total*100).toFixed(1)+'%' : ''}` }
           : { ...DL_CURRENCY, anchor: 'end', align: 'top', offset: 2 }
       },

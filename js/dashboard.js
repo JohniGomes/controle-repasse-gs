@@ -11,73 +11,52 @@ let chartInstances = {};
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
   showLoader(true);
-  await Promise.all([loadAllData(), loadDentistasFilter(), loadConveniosFilter()]);
+  await loadAllData();
+  populateFiltersFromData();
   setDefaultFilters();
   applyFilters();
   showLoader(false);
 });
 
-// ── Carregamento de dados ─────────────────────────────────────
+// ── Carregamento de dados (1 única chamada) ───────────────────
 async function loadAllData() {
   try {
     const res = await apiCall({ action: 'getLancamentos' });
-    if (res.error) {
-      showToast('Erro Apps Script: ' + res.error, 'error');
-      allLancamentos = [];
-      return;
-    }
+    if (res.error) { showToast('Erro: ' + res.error, 'error'); return; }
     allLancamentos = (res.data || []).map(l => ({
       ...l,
       data: normalizeDate(l.data, l.timestamp)
     }));
-    showToast(
-      allLancamentos.length > 0
-        ? `✓ ${allLancamentos.length} lançamento(s) carregado(s)`
-        : '⚠ Planilha retornou 0 registros',
-      allLancamentos.length > 0 ? 'success' : 'warning'
-    );
   } catch (e) {
-    showToast('Erro de conexão com o servidor: ' + (e.message || e), 'error');
-    allLancamentos = [];
+    showToast('Erro de conexão: ' + (e.message || e), 'error');
   }
 }
 
 function normalizeDate(val, fallbackTimestamp) {
-  // Timestamp é sempre ISO confiável — usa como fonte principal
   if (fallbackTimestamp) {
     const ts = String(fallbackTimestamp).slice(0, 10);
     if (/^\d{4}-\d{2}-\d{2}/.test(ts)) return ts;
   }
-  if (!val) return '';
-  const s = String(val);
+  const s = String(val || '');
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   return '';
 }
 
-async function loadDentistasFilter() {
-  try {
-    const res = await apiCall({ action: 'getDentistas' });
-    dentistasDB = res.data || [];
-    const sel = document.getElementById('filterDentista');
-    dentistasDB.forEach(d => {
-      const o = document.createElement('option');
-      o.value = d.nome; o.textContent = d.nome;
-      sel.appendChild(o);
-    });
-  } catch {}
-}
+// Popula filtros de dentista e convênio direto dos dados carregados
+function populateFiltersFromData() {
+  const dentistas = [...new Set(allLancamentos.map(l => l.dentista).filter(Boolean))].sort();
+  const dSel = document.getElementById('filterDentista');
+  dentistas.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d; o.textContent = d; dSel.appendChild(o);
+  });
 
-async function loadConveniosFilter() {
-  try {
-    const res = await apiCall({ action: 'getConvenios' });
-    conveniosDB = res.data || [];
-    const sel = document.getElementById('filterConvenio');
-    conveniosDB.forEach(c => {
-      const o = document.createElement('option');
-      o.value = c.nome; o.textContent = c.nome;
-      sel.appendChild(o);
-    });
-  } catch {}
+  const convenios = [...new Set(allLancamentos.map(l => l.convenio).filter(Boolean))].sort();
+  const cSel = document.getElementById('filterConvenio');
+  convenios.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c; cSel.appendChild(o);
+  });
 }
 
 // ── Filtros ───────────────────────────────────────────────────

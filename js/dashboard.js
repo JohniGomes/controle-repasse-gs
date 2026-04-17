@@ -95,20 +95,19 @@ function switchPeriod(type) {
 }
 
 function applyFilters() {
-  const dentista    = document.getElementById('filterDentista').value;
+  const dentista     = document.getElementById('filterDentista').value;
   const procedimento = document.getElementById('filterProcedimento').value;
-  const convenio    = document.getElementById('filterConvenio').value;
+  const convenio     = document.getElementById('filterConvenio').value;
   const activePeriod = document.querySelector('.period-tab.active')?.dataset.type || 'month';
+  const m            = document.getElementById('filterMonth').value;
 
   filteredLancamentos = allLancamentos.filter(l => {
-    if (dentista    && l.dentista    !== dentista)    return false;
-    if (procedimento && l.procedimento !== procedimento) return false;
-    if (convenio    && l.convenio    !== convenio)    return false;
+    if (dentista     && l.dentista.trim()     !== dentista.trim())     return false;
+    if (procedimento && l.procedimento.trim() !== procedimento.trim()) return false;
+    if (convenio     && (l.convenio || '').trim() !== convenio.trim()) return false;
 
-    // Filtro de período
     const d = String(l.data).slice(0, 10);
     if (activePeriod === 'month') {
-      const m = document.getElementById('filterMonth').value;
       if (m && !d.startsWith(m)) return false;
     } else if (activePeriod === 'year') {
       const y = document.getElementById('filterYear').value;
@@ -121,6 +120,15 @@ function applyFilters() {
     }
     return true;
   });
+
+  // DEBUG — remova após confirmar que está funcionando
+  if (allLancamentos.length > 0 && filteredLancamentos.length === 0) {
+    const l0 = allLancamentos[0];
+    showToast(
+      `DEBUG: total=${allLancamentos.length} | dentFiltro="${dentista}" | dentDado="${l0.dentista}" | dataDado="${l0.data}" | mesFiltro="${m}" | periodo="${activePeriod}"`,
+      'warning'
+    );
+  }
 
   renderSummary();
   renderTable();

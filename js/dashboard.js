@@ -42,21 +42,15 @@ async function loadAllData() {
 }
 
 function normalizeDate(val, fallbackTimestamp) {
-  if (!val) return '';
-  const s = String(val);
-  // Formato correto
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  // Tenta parsear
-  const dt = new Date(s);
-  if (!isNaN(dt) && dt.getFullYear() > 2000) {
-    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-  }
-  // Fallback: extrai data do timestamp (campo gerado automaticamente)
+  // Timestamp é sempre ISO confiável — usa como fonte principal
   if (fallbackTimestamp) {
     const ts = String(fallbackTimestamp).slice(0, 10);
     if (/^\d{4}-\d{2}-\d{2}/.test(ts)) return ts;
   }
-  return s.slice(0, 10);
+  if (!val) return '';
+  const s = String(val);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return '';
 }
 
 async function loadDentistasFilter() {

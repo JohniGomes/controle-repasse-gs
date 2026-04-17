@@ -277,6 +277,11 @@ const LEGEND_OPTS = {
   labels: { font: { family: 'Poppins', size: 11 }, padding: 14, boxWidth: 12 }
 };
 
+const LEGEND_TOP = {
+  position: 'top',
+  labels: { font: { family: 'Poppins', size: 11 }, padding: 12, boxWidth: 12 }
+};
+
 const DL_CURRENCY = {
   font: { family: 'Poppins', size: 10, weight: '700' },
   color: '#1a202c',
@@ -318,7 +323,7 @@ function renderChartTipo() {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
       layout: { padding: 30 },
       plugins: {
-        legend: LEGEND_OPTS,
+        legend: LEGEND_TOP,
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)}` } },
         datalabels: {
           anchor: 'end', align: 'end', offset: 6,
@@ -347,7 +352,7 @@ function renderChartRepasse() {
       responsive: true, maintainAspectRatio: false, cutout: '62%',
       layout: { padding: 30 },
       plugins: {
-        legend: LEGEND_OPTS,
+        legend: LEGEND_TOP,
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${formatCurrency(ctx.raw)} (${totalVal > 0 ? (ctx.raw/totalVal*100).toFixed(1) : 0}%)` } },
         datalabels: {
           anchor: 'end', align: 'end', offset: 6,
@@ -398,7 +403,7 @@ function renderChartConvenio() {
       cutout: isDough ? '62%' : undefined,
       layout: isDough ? { padding: 30 } : { padding: { top: 28 } },
       plugins: {
-        legend: { ...LEGEND_OPTS, display: isDough },
+        legend: { ...LEGEND_TOP, display: isDough },
         tooltip: { callbacks: { label: ctx => ` ${formatCurrency(ctx.raw)}` } },
         datalabels: isDough
           ? { anchor: 'end', align: 'end', offset: 6, color: '#1a202c',

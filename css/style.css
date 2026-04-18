@@ -162,6 +162,8 @@ body {
 }
 .form-control, .form-select {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: .55rem .85rem;
   border: 1.5px solid var(--border);
   border-radius: 8px;
@@ -171,6 +173,7 @@ body {
   background: var(--white);
   transition: border-color .2s, box-shadow .2s;
   outline: none;
+  box-sizing: border-box;
 }
 .form-control:focus, .form-select:focus {
   border-color: var(--primary);
@@ -476,10 +479,19 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
 }
 
 /* ── PERÍODO FILTER ─────────────────────────────────────── */
+#periodMonth,
+#periodYear,
+#periodCustom {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .period-tabs {
   display: flex;
   gap: .3rem;
   margin-bottom: .6rem;
+  flex-wrap: wrap;
 }
 .period-tab {
   padding: .25rem .7rem;

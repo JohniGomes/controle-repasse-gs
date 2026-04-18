@@ -140,7 +140,7 @@ function renderTable() {
   tbody.innerHTML = sorted.map(l => {
     const isConvenio = l.tipo === 'Convênio';
     const repasseCell = l.glosado
-      ? `<span class="badge badge-glosado">GLOSADO</span>`
+      ? `<span style="color:var(--danger);font-weight:700;text-decoration:line-through">${formatCurrency(l.repasse)}</span> <span class="badge badge-glosado">GLOSADO</span>`
       : `<span style="color:var(--primary);font-weight:700">${formatCurrency(l.repasse)}</span>`;
 
     const btnGlosa = isConvenio
@@ -370,10 +370,16 @@ function destroyCharts() {
   chartInstances = {};
 }
 
+// Dados ativos (sem glosados) usados nos gráficos
+function getChartData() {
+  return filteredLancamentos.filter(l => !l.glosado);
+}
+
 function renderCharts() {
   destroyCharts();
   const section = document.getElementById('chartsSection');
-  if (!filteredLancamentos.length) { section.style.display = 'none'; return; }
+  const ativos = getChartData();
+  if (!ativos.length) { section.style.display = 'none'; return; }
   section.style.display = '';
   renderChartTipo();
   renderChartRepasse();
@@ -413,7 +419,7 @@ function doughnutLegend(rawData, total, colors) {
 // ── 1. Particular vs Convênio (Doughnut) ─────────────────────
 function renderChartTipo() {
   const grupos = {};
-  filteredLancamentos.forEach(l => { grupos[l.tipo] = (grupos[l.tipo] || 0) + Number(l.repasse); });
+  getChartData().forEach(l => { grupos[l.tipo] = (grupos[l.tipo] || 0) + Number(l.repasse); });
   const labels = Object.keys(grupos);
   const data   = labels.map(k => grupos[k]);
   const total  = data.reduce((s, v) => s + v, 0);
@@ -436,8 +442,9 @@ function renderChartTipo() {
 
 // ── 2. Repasse vs Receita Clínica (Doughnut) ─────────────────
 function renderChartRepasse() {
-  const totalRep = filteredLancamentos.reduce((s, l) => s + Number(l.repasse), 0);
-  const totalVal = filteredLancamentos.reduce((s, l) => s + Number(l.valor),   0);
+  const ativos = getChartData();
+  const totalRep = ativos.reduce((s, l) => s + Number(l.repasse), 0);
+  const totalVal = ativos.reduce((s, l) => s + Number(l.valor),   0);
   const clinica  = Math.max(0, totalVal - totalRep);
   const data     = [totalRep, clinica];
   const colors   = ['#0ea5a0', '#1a56db'];
@@ -459,7 +466,7 @@ function renderChartRepasse() {
 
 // ── 3. Repasse por Convênio (Doughnut ≤5 / Bar >5) ───────────
 function renderChartConvenio() {
-  const convData = filteredLancamentos.filter(l => l.tipo === 'Convênio');
+  const convData = getChartData().filter(l => l.tipo === 'Convênio');
   const grupos   = {};
   convData.forEach(l => { const k = l.convenio || 'Sem nome'; grupos[k] = (grupos[k] || 0) + Number(l.repasse); });
   const labels  = Object.keys(grupos);
@@ -515,7 +522,7 @@ function renderChartConvenio() {
 // ── 4. Repasse por Dentista (Bar vertical) ────────────────────
 function renderChartDentista() {
   const grupos = {};
-  filteredLancamentos.forEach(l => { grupos[l.dentista] = (grupos[l.dentista] || 0) + Number(l.repasse); });
+  getChartData().forEach(l => { grupos[l.dentista] = (grupos[l.dentista] || 0) + Number(l.repasse); });
   const sorted = Object.entries(grupos).sort((a, b) => b[1] - a[1]);
   const labels = sorted.map(([k]) => k);
   const data   = sorted.map(([, v]) => v);
@@ -545,7 +552,7 @@ function renderChartDentista() {
 // ── 5. Top Procedimentos (Horizontal Bar) ────────────────────
 function renderChartProcedimento() {
   const grupos = {};
-  filteredLancamentos.forEach(l => { grupos[l.procedimento] = (grupos[l.procedimento] || 0) + Number(l.repasse); });
+  getChartData().forEach(l => { grupos[l.procedimento] = (grupos[l.procedimento] || 0) + Number(l.repasse); });
   const sorted = Object.entries(grupos).sort((a, b) => b[1] - a[1]).slice(0, 10);
   const labels = sorted.map(([k]) => k);
   const data   = sorted.map(([, v]) => v);

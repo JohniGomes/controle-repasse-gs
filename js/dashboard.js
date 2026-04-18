@@ -274,7 +274,7 @@ function exportPDF() {
     l.procedimento,
     l.tipo,
     l.convenio || '—',
-    l.glosado ? 'GLOSADO' : formatCurrency(l.repasse)
+    formatCurrency(l.repasse)
   ]);
 
   const dangerRGB = [220, 38, 38];

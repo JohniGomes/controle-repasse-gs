@@ -327,6 +327,26 @@ tbody tr:last-child { border-bottom: none; }
 }
 .badge-particular { background: var(--primary-light); color: var(--primary); }
 .badge-convenio   { background: #e6fafa;               color: var(--accent);  }
+.badge-glosado    { background: #fee2e2;               color: var(--danger);  }
+
+/* Linha glosada */
+tr.row-glosado td { opacity: .45; text-decoration: line-through; }
+tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
+
+/* Botões de ação na tabela */
+.td-actions { white-space: nowrap; text-align: center; }
+.btn-action {
+  border: none; background: transparent; cursor: pointer;
+  padding: .28rem .38rem; border-radius: 5px;
+  font-size: .8rem; line-height: 1; transition: background .15s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-glose   { color: #d97706; }
+.btn-glose:hover   { background: #fef3c7; }
+.btn-unglose { color: #16a34a; }
+.btn-unglose:hover { background: #dcfce7; }
+.btn-del     { color: var(--danger); }
+.btn-del:hover     { background: #fee2e2; }
 
 /* ── MODAL ──────────────────────────────────────────────── */
 .modal-overlay {

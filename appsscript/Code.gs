@@ -19,7 +19,9 @@ function doGet(e) {
       case 'addConvenio':     result = addConvenio(e.parameter.nome);              break;
       case 'deleteConvenio':  result = deleteConvenio(e.parameter.id);            break;
       case 'addLancamento':   result = addLancamento(JSON.parse(e.parameter.data)); break;
-      case 'getLancamentos':  result = getLancamentos();                           break;
+      case 'getLancamentos':  result = getLancamentos();                                          break;
+      case 'updateGlosa':     result = updateGlosa(e.parameter.id, e.parameter.glosado);        break;
+      case 'deleteLancamento':result = deleteLancamento(e.parameter.id);                        break;
       default:                result = { error: 'Ação inválida' };
     }
   } catch (err) {
@@ -130,7 +132,7 @@ function addLancamento(l) {
   getSheet(SHEET_LANCAMENTOS).appendRow([
     id, l.data, l.dentista, l.paciente, l.procedimento,
     l.tipo, l.convenio || '', Number(l.valor), Number(l.repasse),
-    new Date().toISOString()
+    new Date().toISOString(), false
   ]);
   return { success: true, id };
 }
@@ -141,17 +143,41 @@ function getLancamentos() {
   for (let i = 1; i < data.length; i++) {
     const d = data[i];
     list.push({
-      id: String(d[0]),
-      data: fmtDate(d[1]),
-      dentista: d[2],
-      paciente: d[3],
+      id:           String(d[0]),
+      data:         fmtDate(d[1]),
+      dentista:     d[2],
+      paciente:     d[3],
       procedimento: d[4],
-      tipo: d[5],
-      convenio: d[6],
-      valor: Number(d[7]),
-      repasse: Number(d[8]),
-      timestamp: String(d[9])
+      tipo:         d[5],
+      convenio:     d[6],
+      valor:        Number(d[7]),
+      repasse:      Number(d[8]),
+      timestamp:    String(d[9]),
+      glosado:      d[10] === true || String(d[10]).toUpperCase() === 'TRUE'
     });
   }
   return { success: true, data: list };
+}
+
+function findRowById(sheet, id) {
+  const data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++)
+    if (String(data[i][0]) === String(id)) return i + 1;
+  return -1;
+}
+
+function updateGlosa(id, glosado) {
+  const sheet = getSheet(SHEET_LANCAMENTOS);
+  const row   = findRowById(sheet, id);
+  if (row === -1) return { error: 'Lançamento não encontrado' };
+  sheet.getRange(row, 11).setValue(glosado === 'true' || glosado === true);
+  return { success: true };
+}
+
+function deleteLancamento(id) {
+  const sheet = getSheet(SHEET_LANCAMENTOS);
+  const row   = findRowById(sheet, id);
+  if (row === -1) return { error: 'Lançamento não encontrado' };
+  sheet.deleteRow(row);
+  return { success: true };
 }

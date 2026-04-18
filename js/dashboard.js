@@ -200,7 +200,7 @@ async function deleteRow(id) {
 }
 
 // ── Export PDF ────────────────────────────────────────────────
-function exportPDF() {
+async function exportPDF() {
   if (!filteredLancamentos.length) {
     showToast('Nenhum dado para exportar', 'warning'); return;
   }
@@ -215,18 +215,28 @@ function exportPDF() {
   doc.setFillColor(...primaryRGB);
   doc.rect(0, 0, 297, 28, 'F');
 
-  // Logo dente (simplificado)
-  doc.setDrawColor(255,255,255);
-  doc.setLineWidth(0.5);
-
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Centro Clínico GS', 148, 12, { align: 'center' });
-
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Sistema de Controle de Repasse', 148, 20, { align: 'center' });
+  // Logo centralizada no cabeçalho (carregada em canvas para evitar filtro CSS)
+  await new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/png');
+        const logoH = 16;
+        const logoW = (img.naturalWidth / img.naturalHeight) * logoH;
+        const logoX = (297 - logoW) / 2;
+        const logoY = (28 - logoH) / 2;
+        doc.addImage(dataUrl, 'PNG', logoX, logoY, logoW, logoH);
+      } catch(e) { /* fallback abaixo */ }
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = 'img/logo.png';
+  });
 
   // ── Info do relatório ────────────────────────────────────────
   doc.setTextColor(60, 60, 60);

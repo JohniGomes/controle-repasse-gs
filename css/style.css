@@ -532,7 +532,6 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
   display: flex;
   gap: .3rem;
   margin-bottom: .6rem;
-  flex-wrap: wrap;
 }
 .period-tab {
   padding: .25rem .7rem;

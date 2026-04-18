@@ -119,7 +119,7 @@ body {
   max-width: 200px;
   display: block;
   object-fit: contain;
-  filter: brightness(0) invert(1);
+  filter: brightness(0);
 }
 
 /* ── CARDS ──────────────────────────────────────────────── */

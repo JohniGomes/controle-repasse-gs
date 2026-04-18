@@ -118,12 +118,14 @@ function clearFilters() {
 
 // ── Summary cards ─────────────────────────────────────────────
 function renderSummary() {
-  const qtd      = filteredLancamentos.length;
-  const totalVal = filteredLancamentos.reduce((s, l) => s + (Number(l.valor)   || 0), 0);
-  const totalRep = filteredLancamentos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
+  const ativos   = filteredLancamentos.filter(l => !l.glosado);
+  const glosados = filteredLancamentos.filter(l =>  l.glosado);
+  const totalVal = ativos.reduce((s, l) => s + (Number(l.valor)   || 0), 0);
+  const totalRep = ativos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
 
-  document.getElementById('summaryQtd').textContent  = qtd;
-  document.getElementById('summaryValor').textContent = formatCurrency(totalVal);
+  document.getElementById('summaryQtd').textContent =
+    filteredLancamentos.length + (glosados.length ? ` (${glosados.length} glosado${glosados.length > 1 ? 's' : ''})` : '');
+  document.getElementById('summaryValor').textContent   = formatCurrency(totalVal);
   document.getElementById('summaryRepasse').textContent = formatCurrency(totalRep);
 }
 
@@ -131,21 +133,70 @@ function renderSummary() {
 function renderTable() {
   const tbody = document.getElementById('dashboardBody');
   if (!filteredLancamentos.length) {
-    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Nenhum lançamento encontrado para os filtros selecionados.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>Nenhum lançamento encontrado para os filtros selecionados.</p></div></td></tr>';
     return;
   }
   const sorted = [...filteredLancamentos].sort((a, b) => String(b.data).localeCompare(String(a.data)));
-  tbody.innerHTML = sorted.map(l => `
-    <tr>
+  tbody.innerHTML = sorted.map(l => {
+    const isConvenio = l.tipo === 'Convênio';
+    const repasseCell = l.glosado
+      ? `<span class="badge badge-glosado">GLOSADO</span>`
+      : `<span style="color:var(--primary);font-weight:700">${formatCurrency(l.repasse)}</span>`;
+
+    const btnGlosa = isConvenio
+      ? `<button class="btn-action ${l.glosado ? 'btn-unglose' : 'btn-glose'}"
+           onclick="toggleGlosa('${l.id}',${l.glosado})"
+           title="${l.glosado ? 'Remover glosa' : 'Marcar como glosado'}">
+           ${l.glosado
+             ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
+             : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`
+           }
+         </button>`
+      : '';
+
+    return `
+    <tr class="${l.glosado ? 'row-glosado' : ''}">
       <td style="white-space:nowrap">${formatDate(l.data)}</td>
       <td>${l.dentista}</td>
       <td>${l.paciente}</td>
-      <td style="max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.procedimento}">${l.procedimento}</td>
-      <td><span class="badge badge-${l.tipo === 'Particular' ? 'particular' : 'convenio'}">${l.tipo}</span></td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.procedimento}">${l.procedimento}</td>
+      <td><span class="badge badge-${isConvenio ? 'convenio' : 'particular'}">${l.tipo}</span></td>
       <td>${l.convenio || '—'}</td>
       <td>${formatCurrency(l.valor)}</td>
-      <td style="color:var(--primary);font-weight:700">${formatCurrency(l.repasse)}</td>
-    </tr>`).join('');
+      <td>${repasseCell}</td>
+      <td class="td-actions">
+        ${btnGlosa}
+        <button class="btn-action btn-del" onclick="deleteRow('${l.id}')" title="Excluir lançamento">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Glosa ─────────────────────────────────────────────────────
+async function toggleGlosa(id, current) {
+  const novo = !current;
+  try {
+    const res = await apiCall({ action: 'updateGlosa', id, glosado: novo });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    const item = allLancamentos.find(l => l.id === id);
+    if (item) item.glosado = novo;
+    applyFilters();
+    showToast(novo ? 'Marcado como glosado' : 'Glosa removida');
+  } catch { showToast('Erro ao atualizar glosa', 'error'); }
+}
+
+// ── Excluir linha ─────────────────────────────────────────────
+async function deleteRow(id) {
+  if (!confirm('Excluir este lançamento? A ação não pode ser desfeita.')) return;
+  try {
+    const res = await apiCall({ action: 'deleteLancamento', id });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    allLancamentos = allLancamentos.filter(l => l.id !== id);
+    applyFilters();
+    showToast('Lançamento excluído');
+  } catch { showToast('Erro ao excluir', 'error'); }
 }
 
 // ── Export PDF ────────────────────────────────────────────────
@@ -201,7 +252,8 @@ function exportPDF() {
   doc.text(`Dentista: ${dentista}`, 14, 41);
   doc.text(`Gerado em: ${geradoEm}`, 14, 47);
 
-  const totalRep = filteredLancamentos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
+  const ativos   = filteredLancamentos.filter(l => !l.glosado);
+  const totalRep = ativos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryRGB);
@@ -209,7 +261,7 @@ function exportPDF() {
   doc.text(`Total Repasse: ${formatCurrency(totalRep)}`, 200, 41);
 
   // ── Tabela ───────────────────────────────────────────────────
-  const sorted = [...filteredLancamentos].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const sorted = ativos.sort((a, b) => String(b.data).localeCompare(String(a.data)));
   const rows   = sorted.map(l => [
     formatDate(l.data),
     l.dentista,

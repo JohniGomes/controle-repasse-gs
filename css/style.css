@@ -413,7 +413,7 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
 }
 .filter-bar .filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: .85rem;
   align-items: end;
 }

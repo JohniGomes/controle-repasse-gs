@@ -494,12 +494,14 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
 .date-wrap {
   display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   border: 1.5px solid var(--border);
   border-radius: 8px;
   background: var(--white);
   transition: border-color .2s, box-shadow .2s;
+  box-sizing: border-box;
 }
 .date-wrap:focus-within {
   border-color: var(--primary);
@@ -509,8 +511,7 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
 /* O input fica sem borda própria, preenche o wrapper */
 .date-input {
   display: block;
-  width: calc(100% + 2px);
-  margin-left: -1px;
+  width: 100%;
   border: none;
   outline: none;
   background: transparent;

@@ -77,17 +77,21 @@
             <button class="period-tab" data-type="year"   onclick="switchPeriod('year')">Ano</button>
             <button class="period-tab" data-type="custom" onclick="switchPeriod('custom')">Personalizado</button>
           </div>
-          <div id="periodMonth">
-            <input type="month" id="filterMonth" class="form-control">
+          <div id="periodMonth" class="date-wrap">
+            <input type="month" id="filterMonth" class="date-input">
           </div>
-          <div id="periodYear" style="display:none">
-            <input type="number" id="filterYear" class="form-control" placeholder="2025" min="2020" max="2099">
+          <div id="periodYear" style="display:none" class="date-wrap">
+            <input type="number" id="filterYear" class="date-input" placeholder="2025" min="2020" max="2099">
           </div>
           <div id="periodCustom" style="display:none">
-            <div style="display:flex;gap:.5rem;align-items:center">
-              <input type="date" id="filterFrom" class="form-control" style="flex:1">
-              <span style="color:var(--text-muted);font-size:.8rem">até</span>
-              <input type="date" id="filterTo" class="form-control" style="flex:1">
+            <div class="custom-range">
+              <div class="date-wrap" style="flex:1">
+                <input type="date" id="filterFrom" class="date-input">
+              </div>
+              <span style="color:var(--text-muted);font-size:.8rem;white-space:nowrap">até</span>
+              <div class="date-wrap" style="flex:1">
+                <input type="date" id="filterTo" class="date-input">
+              </div>
             </div>
           </div>
         </div>

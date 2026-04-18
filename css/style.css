@@ -102,19 +102,22 @@ body {
   text-align: center;
 }
 
-.login-logo {
-  width: 72px;
-  height: 72px;
-  background: var(--primary-light);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
+.login-logo-img {
+  max-width: 240px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto 1.4rem;
+  display: block;
 }
 
-.login-card h1 { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
-.login-card p  { color: var(--text-muted); font-size: .85rem; margin-bottom: 1.8rem; }
+.login-card p { color: var(--text-muted); font-size: .85rem; margin-bottom: 1.8rem; }
+
+.header-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+  filter: brightness(0) invert(1);
+}
 
 /* ── CARDS ──────────────────────────────────────────────── */
 .card {

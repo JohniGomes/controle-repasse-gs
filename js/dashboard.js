@@ -253,24 +253,31 @@ function exportPDF() {
   doc.text(`Gerado em: ${geradoEm}`, 14, 47);
 
   const ativos   = filteredLancamentos.filter(l => !l.glosado);
+  const glosados = filteredLancamentos.filter(l =>  l.glosado);
   const totalRep = ativos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryRGB);
-  doc.text(`Total de Lançamentos: ${filteredLancamentos.length}`, 200, 35);
+  doc.text(`Total de Lançamentos: ${ativos.length}${glosados.length ? ` (+${glosados.length} glosado${glosados.length > 1 ? 's' : ''})` : ''}`, 200, 35);
   doc.text(`Total Repasse: ${formatCurrency(totalRep)}`, 200, 41);
 
   // ── Tabela ───────────────────────────────────────────────────
-  const sorted = ativos.sort((a, b) => String(b.data).localeCompare(String(a.data)));
-  const rows   = sorted.map(l => [
+  // Ativos ordenados por data, seguidos dos glosados (em vermelho, só informação)
+  const sortedAtivos   = [...ativos].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const sortedGlosados = [...glosados].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const sorted = [...sortedAtivos, ...sortedGlosados];
+
+  const rows = sorted.map(l => [
     formatDate(l.data),
     l.dentista,
     l.paciente,
     l.procedimento,
     l.tipo,
     l.convenio || '—',
-    formatCurrency(l.repasse)
+    l.glosado ? 'GLOSADO' : formatCurrency(l.repasse)
   ]);
+
+  const dangerRGB = [220, 38, 38];
 
   doc.autoTable({
     startY: 52,
@@ -288,8 +295,16 @@ function exportPDF() {
       5: { cellWidth: 35 },
       6: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: primaryRGB }
     },
+    didParseCell: (data) => {
+      // Linhas glosadas: texto vermelho, fundo rosado, itálico
+      const rowIndex = data.row.index;
+      if (rowIndex >= sortedAtivos.length) {
+        data.cell.styles.textColor = dangerRGB;
+        data.cell.styles.fillColor = [255, 235, 235];
+        data.cell.styles.fontStyle = 'italic';
+      }
+    },
     didDrawPage: (data) => {
-      // Rodapé
       const pageH = doc.internal.pageSize.height;
       doc.setFontSize(7);
       doc.setTextColor(150);

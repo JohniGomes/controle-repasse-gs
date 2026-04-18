@@ -492,7 +492,7 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
   min-width: 0;
 }
 
-/* Impede que inputs de data forcem largura maior que o container */
+/* Inputs de data/mês/ano — mesma aparência compacta dos demais */
 #filterMonth,
 #filterYear,
 #filterFrom,
@@ -501,6 +501,8 @@ tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
+  padding: .32rem .55rem !important;
+  font-size: .82rem !important;
 }
 
 .period-tabs {

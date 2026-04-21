@@ -208,8 +208,8 @@ async function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  const primaryRGB = [26, 86, 219];
-  const accentRGB  = [14, 165, 160];
+  const primaryRGB = [31, 49, 64];
+  const accentRGB  = [82, 87, 89];
 
   // ── Cabeçalho ───────────────────────────────────────────────
   doc.setFillColor(...primaryRGB);
@@ -347,7 +347,7 @@ function showLoader(show) {
 
 Chart.register(ChartDataLabels);
 
-const CHART_PALETTE = ['#1a56db','#0ea5a0','#16a34a','#f97316','#7c3aed','#ec4899','#eab308','#0284c7','#dc2626','#65a30d'];
+const CHART_PALETTE = ['#1F3140','#525759','#949DA6','#011526','#3d5166','#6b7880','#2a4255','#7a8a94','#4a6070','#8a9aa4'];
 
 const LEGEND_OPTS = {
   position: 'bottom',
@@ -423,7 +423,7 @@ function renderChartTipo() {
   const labels = Object.keys(grupos);
   const data   = labels.map(k => grupos[k]);
   const total  = data.reduce((s, v) => s + v, 0);
-  const colors = ['#1a56db', '#0ea5a0'];
+  const colors = ['#1F3140', '#949DA6'];
 
   chartInstances.tipo = new Chart(document.getElementById('chartTipo'), {
     type: 'doughnut',
@@ -447,7 +447,7 @@ function renderChartRepasse() {
   const totalVal = ativos.reduce((s, l) => s + Number(l.valor),   0);
   const clinica  = Math.max(0, totalVal - totalRep);
   const data     = [totalRep, clinica];
-  const colors   = ['#0ea5a0', '#1a56db'];
+  const colors   = ['#525759', '#1F3140'];
 
   chartInstances.repasse = new Chart(document.getElementById('chartRepasse'), {
     type: 'doughnut',
@@ -561,7 +561,7 @@ function renderChartProcedimento() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label: 'Repasse', data, backgroundColor: '#1a56db', borderRadius: 4, borderSkipped: false }]
+      datasets: [{ label: 'Repasse', data, backgroundColor: '#1F3140', borderRadius: 4, borderSkipped: false }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,

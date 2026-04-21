@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque — Centro Clínico GS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Loader -->
+  <div class="page-loader" id="pageLoader" style="display:none">
+    <div class="spin-big"></div>
+    <p>Carregando dados...</p>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">
+      <img src="img/logo.png" alt="Centro Clínico Garcez Santos" class="header-logo">
+    </div>
+    <nav class="header-nav">
+      <a href="lancamento.html" class="btn-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Lançamento
+      </a>
+      <a href="dashboard.html" class="btn-header">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <button class="btn-header" onclick="logout()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </nav>
+  </header>
+
+  <main class="page-body">
+
+    <!-- Cards de resumo -->
+    <div class="summary-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.5rem">
+      <div class="summary-card">
+        <span class="label">Total de Itens</span>
+        <span class="value" id="summaryTotal">—</span>
+        <span class="sub">cadastrados no estoque</span>
+      </div>
+      <div class="summary-card" style="border-left:4px solid var(--warning)">
+        <span class="label">Estoque Baixo</span>
+        <span class="value" id="summaryBaixo" style="color:var(--warning)">—</span>
+        <span class="sub">abaixo da quantidade mínima</span>
+      </div>
+      <div class="summary-card" style="border-left:4px solid var(--danger)">
+        <span class="label">Estoque Crítico</span>
+        <span class="value" id="summaryCritico" style="color:var(--danger)">—</span>
+        <span class="sub">quantidade zerada</span>
+      </div>
+    </div>
+
+    <!-- Tabela de itens -->
+    <div class="card">
+      <div class="card-header">
+        <h2>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          Controle de Estoque
+        </h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modalAddItem')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Item
+        </button>
+      </div>
+
+      <!-- Filtro rápido -->
+      <div style="padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+        <select id="filtroCategoria" class="form-select" style="max-width:220px" onchange="renderTabela()">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select id="filtroStatus" class="form-select" style="max-width:180px" onchange="renderTabela()">
+          <option value="">Todos os status</option>
+          <option value="ok">OK</option>
+          <option value="baixo">Estoque Baixo</option>
+          <option value="critico">Estoque Crítico</option>
+        </select>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Categoria</th>
+              <th>Qtd Atual</th>
+              <th>Qtd Mínima</th>
+              <th>Status</th>
+              <th>Último Reabastecimento</th>
+              <th style="width:96px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="estoqueBody">
+            <tr><td colspan="7"><div class="empty-state"><p>Carregando...</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Novo / Editar Item -->
+  <div class="modal-overlay" id="modalAddItem">
+    <div class="modal-box">
+      <h3 id="modalItemTitulo">Cadastrar Item</h3>
+      <input type="hidden" id="editRowIndex">
+
+      <div class="form-group">
+        <label class="form-label">Nome do Item *</label>
+        <input type="text" id="itemNome" class="form-control" placeholder="Ex: Luvas de nitrila M">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoria *</label>
+        <div class="input-group">
+          <select id="itemCategoria" class="form-select">
+            <option value="">Selecione...</option>
+          </select>
+          <button type="button" class="btn btn-success btn-icon" title="Nova categoria" onclick="openModal('modalAddCategoria')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Quantidade Atual *</label>
+          <input type="number" id="itemQtdAtual" class="form-control" placeholder="0" min="0">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Quantidade Mínima *</label>
+          <input type="number" id="itemQtdMin" class="form-control" placeholder="0" min="0">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('modalAddItem')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarItem()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Movimentar estoque -->
+  <div class="modal-overlay" id="modalMovimentar">
+    <div class="modal-box">
+      <h3 id="modalMovTitulo">Movimentar Estoque</h3>
+      <input type="hidden" id="movRowIndex">
+      <p id="movItemNome" style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem"></p>
+
+      <div class="form-group">
+        <label class="form-label">Tipo de Movimentação *</label>
+        <div class="tipo-group">
+          <label class="tipo-option selected-particular" id="tipoEntrada" onclick="selectMovTipo('entrada')">
+            <input type="radio" name="movTipo" value="entrada" checked>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Entrada
+          </label>
+          <label class="tipo-option" id="tipoSaida" onclick="selectMovTipo('saida')">
+            <input type="radio" name="movTipo" value="saida">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Saída
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Quantidade *</label>
+        <input type="number" id="movQtd" class="form-control" placeholder="0" min="1">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('modalMovimentar')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarMovimentacao()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nova Categoria -->
+  <div class="modal-overlay" id="modalAddCategoria">
+    <div class="modal-box">
+      <h3>Nova Categoria</h3>
+      <div class="form-group">
+        <label class="form-label">Nome da categoria</label>
+        <input type="text" id="newCategoriaNome" class="form-control" placeholder="Ex: EPI, Materiais Odontológicos..."
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addCategoria()}">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('modalAddCategoria')">Cancelar</button>
+        <button class="btn btn-success" onclick="addCategoria()">Cadastrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/estoque.js?v=1"></script>
+</body>
+</html>

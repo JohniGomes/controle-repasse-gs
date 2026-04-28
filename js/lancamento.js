@@ -297,27 +297,43 @@ function switchArch(type) {
   clearTooth();
 }
 
+let selectedTeeth = [];
+
 function selectTooth(num) {
-  // deselect all
-  document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('selected'));
-  const current = document.getElementById('dente').value;
-  if (String(current) === String(num)) {
-    // clicou no mesmo → deseleciona
-    clearTooth();
-    return;
+  const idx = selectedTeeth.indexOf(num);
+  if (idx > -1) {
+    // já estava selecionado → remove
+    selectedTeeth.splice(idx, 1);
+    document.querySelectorAll(`.tooth-btn[data-tooth="${num}"]`)
+      .forEach(b => b.classList.remove('selected'));
+  } else {
+    // adiciona seleção
+    selectedTeeth.push(num);
+    document.querySelectorAll(`.tooth-btn[data-tooth="${num}"]`)
+      .forEach(b => b.classList.add('selected'));
   }
-  // seleciona
-  document.querySelectorAll(`.tooth-btn[data-tooth="${num}"]`)
-    .forEach(b => b.classList.add('selected'));
-  document.getElementById('dente').value = num;
-  document.getElementById('odontoLabel').textContent = `Dente ${num} selecionado`;
+  updateOdontoLabel();
+}
+
+function updateOdontoLabel() {
+  const inp = document.getElementById('dente');
+  const lbl = document.getElementById('odontoLabel');
+  if (selectedTeeth.length === 0) {
+    inp.value = '';
+    lbl.textContent = 'Nenhum dente selecionado';
+  } else {
+    const sorted = [...selectedTeeth].sort((a, b) => a - b);
+    inp.value = sorted.join(',');
+    lbl.textContent = `Dente${sorted.length > 1 ? 's' : ''} selecionado${sorted.length > 1 ? 's' : ''}: ${sorted.join(', ')}`;
+  }
 }
 
 function clearTooth() {
+  selectedTeeth = [];
   document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('dente').value = '';
   document.getElementById('odontoLabel').textContent = 'Nenhum dente selecionado';
 }
 
-// Inicializa ao carregar
-document.addEventListener('DOMContentLoaded', () => initOdontograma(), false);
+// Inicializa ao carregar — roda depois do DOMContentLoaded principal
+document.addEventListener('DOMContentLoaded', () => { initOdontograma(); selectedTeeth = []; }, false);

@@ -175,7 +175,8 @@ async function salvarLancamento(e) {
     tipo,
     convenio,
     valor:        parseFloat(document.getElementById('valor').value) || 0,
-    repasse:      parseFloat(document.getElementById('repasse').value) || 0
+    repasse:      parseFloat(document.getElementById('repasse').value) || 0,
+    dente:        document.getElementById('dente').value || ''
   };
 
   if (!data.data || !data.dentista || !data.paciente || !data.procedimento || !data.valor) {
@@ -194,6 +195,7 @@ async function salvarLancamento(e) {
     setDefaultDate();
     selectTipo('particular');
     calcularRepasse();
+    clearTooth();
   } catch { showToast('Erro ao salvar lançamento', 'error'); }
   finally {
     btn.disabled = false;
@@ -220,3 +222,102 @@ document.addEventListener('click', e => {
 function showLoader(show) {
   document.getElementById('pageLoader').style.display = show ? 'flex' : 'none';
 }
+
+// ── Odontograma ───────────────────────────────────────────────
+
+// SVG dente genérico: coroa arredondada em cima, raiz apontada em baixo
+function toothSVG() {
+  return `<svg viewBox="0 0 18 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 2 C3 2 1 3 1 7 C1 11 2 14 3 16 C4 18 4.5 22 5 24 C5.3 25.2 6 26 6.5 25 C7 24 7 20 9 20 C11 20 11 24 11.5 25 C12 26 12.7 25.2 13 24 C13.5 22 14 18 15 16 C16 14 17 11 17 7 C17 3 15 2 15 2 C13 1 11 1 9 1 C7 1 5 1 3 2 Z" fill="#949DA6"/>
+  </svg>`;
+}
+
+// SVG dente molar: coroa mais larga com cúspides, raízes bífidas
+function molarSVG() {
+  return `<svg viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 3 C2 3 1 5 1 8 C1 12 2 15 3 17 C4 19 4 21 4.5 23 C4.8 24.5 5.5 25 6 24 C6.5 23 7 21 8 20 C9 19 10 19 11 20 C12 21 12.5 23 13 24 C13.5 25 14.2 24.5 14.5 23 C15 21 15 19 16 17 C17 15 18 12 18 8 C18 5 17 3 17 3 C15 1 13 1 10 1 C7 1 4 1 2 3 Z" fill="#949DA6"/>
+  </svg>`;
+}
+
+const PERM_UPPER_R = [18,17,16,15,14,13,12,11];
+const PERM_UPPER_L = [21,22,23,24,25,26,27,28];
+const PERM_LOWER_L = [31,32,33,34,35,36,37,38];
+const PERM_LOWER_R = [48,47,46,45,44,43,42,41];
+
+const DEC_UPPER_R  = [55,54,53,52,51];
+const DEC_UPPER_L  = [61,62,63,64,65];
+const DEC_LOWER_L  = [71,72,73,74,75];
+const DEC_LOWER_R  = [85,84,83,82,81];
+
+// molares: terminam em 6,7,8 (permanente) ou 4,5 (decídua)
+function isMolar(n) {
+  const u = n % 10;
+  return u === 6 || u === 7 || u === 8;
+}
+function isMolarDec(n) {
+  const u = n % 10;
+  return u === 4 || u === 5;
+}
+
+function buildTeeth(containerId, numbers, decType) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  numbers.forEach(n => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tooth-btn';
+    btn.dataset.tooth = n;
+    const useMolar = decType ? isMolarDec(n) : isMolar(n);
+    btn.innerHTML = `
+      <div class="tooth-icon">${useMolar ? molarSVG() : toothSVG()}</div>
+      <span class="tooth-num">${n}</span>`;
+    btn.addEventListener('click', () => selectTooth(n));
+    el.appendChild(btn);
+  });
+}
+
+function initOdontograma() {
+  buildTeeth('teeth-18-11', PERM_UPPER_R, false);
+  buildTeeth('teeth-21-28', PERM_UPPER_L, false);
+  buildTeeth('teeth-48-41', PERM_LOWER_R, false);
+  buildTeeth('teeth-31-38', PERM_LOWER_L, false);
+  buildTeeth('teeth-55-51', DEC_UPPER_R, true);
+  buildTeeth('teeth-61-65', DEC_UPPER_L, true);
+  buildTeeth('teeth-85-81', DEC_LOWER_R, true);
+  buildTeeth('teeth-71-75', DEC_LOWER_L, true);
+}
+
+function switchArch(type) {
+  document.querySelectorAll('.odonto-tab').forEach((t, i) => {
+    t.classList.toggle('active', (type === 'permanente' && i === 0) || (type === 'decidua' && i === 1));
+  });
+  document.getElementById('archPermanente').classList.toggle('active', type === 'permanente');
+  document.getElementById('archDecidua').classList.toggle('active',    type === 'decidua');
+  clearTooth();
+}
+
+function selectTooth(num) {
+  // deselect all
+  document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('selected'));
+  const current = document.getElementById('dente').value;
+  if (String(current) === String(num)) {
+    // clicou no mesmo → deseleciona
+    clearTooth();
+    return;
+  }
+  // seleciona
+  document.querySelectorAll(`.tooth-btn[data-tooth="${num}"]`)
+    .forEach(b => b.classList.add('selected'));
+  document.getElementById('dente').value = num;
+  document.getElementById('odontoLabel').textContent = `Dente ${num} selecionado`;
+}
+
+function clearTooth() {
+  document.querySelectorAll('.tooth-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('dente').value = '';
+  document.getElementById('odontoLabel').textContent = 'Nenhum dente selecionado';
+}
+
+// Inicializa ao carregar
+document.addEventListener('DOMContentLoaded', () => initOdontograma(), false);

@@ -133,7 +133,7 @@ function renderSummary() {
 function renderTable() {
   const tbody = document.getElementById('dashboardBody');
   if (!filteredLancamentos.length) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>Nenhum lançamento encontrado para os filtros selecionados.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><p>Nenhum lançamento encontrado para os filtros selecionados.</p></div></td></tr>';
     return;
   }
   const sorted = [...filteredLancamentos].sort((a, b) => String(b.data).localeCompare(String(a.data)));
@@ -160,6 +160,7 @@ function renderTable() {
       <td>${l.dentista}</td>
       <td>${l.paciente}</td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.procedimento}">${l.procedimento}</td>
+      <td style="font-weight:600;color:var(--primary)">${l.dente || '—'}</td>
       <td><span class="badge badge-${isConvenio ? 'convenio' : 'particular'}">${l.tipo}</span></td>
       <td>${l.convenio || '—'}</td>
       <td>${formatCurrency(l.valor)}</td>
@@ -282,6 +283,7 @@ async function exportPDF() {
     l.dentista,
     l.paciente,
     l.procedimento,
+    l.dente || '—',
     l.tipo,
     l.convenio || '—',
     formatCurrency(l.repasse)
@@ -291,19 +293,20 @@ async function exportPDF() {
 
   doc.autoTable({
     startY: 52,
-    head: [['Data', 'Dentista', 'Paciente', 'Procedimento', 'Tipo', 'Convênio', 'Repasse']],
+    head: [['Data', 'Dentista', 'Paciente', 'Procedimento', 'Dente', 'Tipo', 'Convênio', 'Repasse']],
     body: rows,
     styles: { fontSize: 8, font: 'helvetica', cellPadding: 2.5 },
     headStyles: { fillColor: primaryRGB, textColor: 255, fontStyle: 'bold', halign: 'left' },
-    alternateRowStyles: { fillColor: [245, 248, 255] },
+    alternateRowStyles: { fillColor: [242, 244, 246] },
     columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 40 },
-      2: { cellWidth: 40 },
-      3: { cellWidth: 65 },
-      4: { cellWidth: 22 },
-      5: { cellWidth: 35 },
-      6: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: primaryRGB }
+      0: { cellWidth: 20 },
+      1: { cellWidth: 36 },
+      2: { cellWidth: 36 },
+      3: { cellWidth: 58 },
+      4: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 30 },
+      7: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: primaryRGB }
     },
     didParseCell: (data) => {
       // Linhas glosadas: texto vermelho, fundo rosado, itálico

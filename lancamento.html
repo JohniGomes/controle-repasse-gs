@@ -124,6 +124,55 @@
             </div>
           </div>
 
+          <!-- Dente -->
+          <div class="form-group">
+            <label class="form-label">Dente <span style="font-weight:400;text-transform:none;font-size:.75rem">(opcional)</span></label>
+            <input type="hidden" id="dente">
+            <div class="odonto-wrap">
+              <div class="odonto-tabs">
+                <button type="button" class="odonto-tab active" onclick="switchArch('permanente')">Permanente</button>
+                <button type="button" class="odonto-tab"        onclick="switchArch('decidua')">Decídua</button>
+                <button type="button" class="odonto-tab" style="margin-left:auto;color:var(--danger);border-color:var(--danger)" onclick="clearTooth()">Limpar</button>
+              </div>
+
+              <!-- Permanente -->
+              <div id="archPermanente" class="odonto-arch active">
+                <!-- Superior -->
+                <div class="odonto-row">
+                  <div id="teeth-18-11" class="odonto-row" style="gap:.22rem"></div>
+                  <div class="odonto-sep"></div>
+                  <div id="teeth-21-28" class="odonto-row" style="gap:.22rem"></div>
+                </div>
+                <div class="odonto-divider"></div>
+                <!-- Inferior -->
+                <div class="odonto-row">
+                  <div id="teeth-48-41" class="odonto-row" style="gap:.22rem"></div>
+                  <div class="odonto-sep"></div>
+                  <div id="teeth-31-38" class="odonto-row" style="gap:.22rem"></div>
+                </div>
+              </div>
+
+              <!-- Decídua -->
+              <div id="archDecidua" class="odonto-arch">
+                <!-- Superior -->
+                <div class="odonto-row">
+                  <div id="teeth-55-51" class="odonto-row" style="gap:.22rem"></div>
+                  <div class="odonto-sep"></div>
+                  <div id="teeth-61-65" class="odonto-row" style="gap:.22rem"></div>
+                </div>
+                <div class="odonto-divider"></div>
+                <!-- Inferior -->
+                <div class="odonto-row">
+                  <div id="teeth-85-81" class="odonto-row" style="gap:.22rem"></div>
+                  <div class="odonto-sep"></div>
+                  <div id="teeth-71-75" class="odonto-row" style="gap:.22rem"></div>
+                </div>
+              </div>
+
+              <div class="odonto-selected-label" id="odontoLabel">Nenhum dente selecionado</div>
+            </div>
+          </div>
+
           <!-- Linha 3: Valor + Repasse -->
           <div class="form-row form-row-2" style="margin-bottom:1.5rem">
             <div class="form-group" style="margin-bottom:0">

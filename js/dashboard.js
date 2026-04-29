@@ -200,6 +200,9 @@ async function deleteRow(id) {
 
 // ── Export PDF ────────────────────────────────────────────────
 async function exportPDF() {
+  // Garante que filteredLancamentos reflete o estado atual de allLancamentos
+  applyFilters();
+
   if (!filteredLancamentos.length) {
     showToast('Nenhum dado para exportar', 'warning'); return;
   }
@@ -421,15 +424,15 @@ async function saveRepasse(span, id) {
       return;
     }
 
-    // Sucesso — atualiza os dois arrays e a célula
+    // Sucesso — atualiza allLancamentos e reconstrói filteredLancamentos
     const itemA = allLancamentos.find(l => l.id === id);
-    const itemF = filteredLancamentos.find(l => l.id === id);
     if (itemA) itemA.repasse = novoVal;
-    if (itemF) itemF.repasse = novoVal;
 
     span.dataset.val = novoVal;
     restoreSpan(span, novoVal);
-    renderSummary();
+
+    // Reconstrói filteredLancamentos do zero a partir do allLancamentos atualizado
+    applyFilters();
     showToast('Repasse atualizado!');
 
   } catch (e) {

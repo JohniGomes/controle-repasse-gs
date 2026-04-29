@@ -404,26 +404,28 @@ async function saveRepasse(input, id) {
 
   try {
     const res = await apiCall({ action: 'updateRepasse', id, repasse: novoVal });
-    if (res.error) { showToast(res.error, 'error'); }
-    else {
-      // Atualiza localmente nos dois arrays
-      const item = allLancamentos.find(l => l.id === id);
-      if (item) item.repasse = novoVal;
-      const itemF = filteredLancamentos.find(l => l.id === id);
-      if (itemF) itemF.repasse = novoVal;
-      showToast('Repasse atualizado!');
+    if (res.error) {
+      showToast(res.error, 'error');
+      // Restaura valor original na célula
+      span.dataset.val = valAtual;
+      span.style.borderBottom = '1.5px dashed var(--primary)';
+      span.innerHTML = formatCurrency(valAtual);
+      span.ondblclick = () => editRepasse(span);
+      return;
     }
-  } catch { showToast('Erro ao salvar repasse', 'error'); }
-
-  // Re-renderiza a célula com o valor novo
-  const item = allLancamentos.find(l => l.id === id);
-  if (item) {
-    span.dataset.val = item.repasse;
+    // Atualiza no array principal
+    const item = allLancamentos.find(l => l.id === id);
+    if (item) item.repasse = novoVal;
+    showToast('Repasse atualizado!');
+    // Re-aplica filtros para garantir que tabela e PDF ficam sincronizados
+    applyFilters();
+  } catch (e) {
+    showToast('Erro ao salvar repasse', 'error');
+    span.dataset.val = valAtual;
     span.style.borderBottom = '1.5px dashed var(--primary)';
-    span.innerHTML = formatCurrency(item.repasse);
+    span.innerHTML = formatCurrency(valAtual);
     span.ondblclick = () => editRepasse(span);
   }
-  renderSummary();
 }
 
 function cancelRepasse(input, id, valOriginal) {

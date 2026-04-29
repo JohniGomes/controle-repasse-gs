@@ -200,6 +200,14 @@ async function deleteRow(id) {
 
 // ── Export PDF ────────────────────────────────────────────────
 async function exportPDF() {
+  // Sincroniza valores visíveis no DOM → filteredLancamentos (fonte de verdade = tela)
+  document.querySelectorAll('.repasse-valor').forEach(s => {
+    const domVal = parseFloat(s.dataset.val);
+    if (isNaN(domVal)) return;
+    const item = filteredLancamentos.find(l => String(l.id) === String(s.dataset.id));
+    if (item) item.repasse = domVal;
+  });
+
   if (!filteredLancamentos.length) {
     showToast('Nenhum dado para exportar', 'warning'); return;
   }

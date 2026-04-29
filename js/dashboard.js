@@ -424,16 +424,11 @@ async function saveRepasse(span, id) {
       return;
     }
 
-    // Sucesso — atualiza allLancamentos e reconstrói filteredLancamentos
-    const itemA = allLancamentos.find(l => l.id === id);
-    if (itemA) itemA.repasse = novoVal;
-
-    span.dataset.val = novoVal;
-    restoreSpan(span, novoVal);
-
-    // Reconstrói filteredLancamentos do zero a partir do allLancamentos atualizado
-    applyFilters();
+    // Sucesso — atualiza em memória (sem recarregar do servidor para evitar dado stale)
+    const item = allLancamentos.find(l => String(l.id) === String(id));
+    if (item) item.repasse = novoVal;
     showToast('Repasse atualizado!');
+    applyFilters();
 
   } catch (e) {
     showToast('Erro de conexão ao salvar repasse', 'error');

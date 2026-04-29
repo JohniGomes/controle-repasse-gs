@@ -406,9 +406,11 @@ async function saveRepasse(input, id) {
     const res = await apiCall({ action: 'updateRepasse', id, repasse: novoVal });
     if (res.error) { showToast(res.error, 'error'); }
     else {
-      // Atualiza localmente
+      // Atualiza localmente nos dois arrays
       const item = allLancamentos.find(l => l.id === id);
       if (item) item.repasse = novoVal;
+      const itemF = filteredLancamentos.find(l => l.id === id);
+      if (itemF) itemF.repasse = novoVal;
       showToast('Repasse atualizado!');
     }
   } catch { showToast('Erro ao salvar repasse', 'error'); }

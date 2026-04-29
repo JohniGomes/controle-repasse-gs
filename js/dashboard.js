@@ -401,17 +401,18 @@ function editRepasse(span) {
 }
 
 async function saveRepasse(span, id) {
-  const input    = span.querySelector('input');
-  if (!input) return;                          // já foi processado
-  const novoVal  = parseFloat(input.value);
-  const valOrig  = parseFloat(span.dataset.valOriginal) || 0;
+  const input = span.querySelector('input');
+  if (!input || input.dataset.saving) return;   // evita duplo disparo
+  input.dataset.saving = '1';
+
+  const novoVal = parseFloat(input.value);
+  const valOrig = parseFloat(span.dataset.valOriginal) || 0;
 
   if (isNaN(novoVal) || novoVal < 0) {
     restoreSpan(span, valOrig);
     return;
   }
 
-  // Mostra "Salvando…" enquanto aguarda
   input.disabled = true;
   input.style.opacity = '.5';
 
@@ -424,11 +425,21 @@ async function saveRepasse(span, id) {
       return;
     }
 
-    // Sucesso — atualiza em memória (sem recarregar do servidor para evitar dado stale)
-    const item = allLancamentos.find(l => String(l.id) === String(id));
-    if (item) item.repasse = novoVal;
+    // Atualiza em memória
+    const itemA = allLancamentos.find(l => String(l.id) === String(id));
+    if (itemA) itemA.repasse = novoVal;
+    const itemF = filteredLancamentos.find(l => String(l.id) === String(id));
+    if (itemF) itemF.repasse = novoVal;
+
+    // Atualiza o span diretamente (sem re-renderizar a tabela toda)
+    span.dataset.val    = novoVal;
+    span.style.borderBottom = '1.5px dashed var(--primary)';
+    span.innerHTML      = formatCurrency(novoVal);
+    span.ondblclick     = () => editRepasse(span);
+
+    // Atualiza só os cards de resumo
+    renderSummary();
     showToast('Repasse atualizado!');
-    applyFilters();
 
   } catch (e) {
     showToast('Erro de conexão ao salvar repasse', 'error');

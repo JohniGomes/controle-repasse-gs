@@ -7,7 +7,7 @@ let filteredLancamentos = [];
 let dentistasDB = [];
 let conveniosDB = [];
 let chartInstances = {};
-const repasseEdits = {};   // id → valor editado pelo usuário (fonte de verdade)
+const repasseEdits = new WeakMap(); // objeto → valor editado (independe de ID)
 
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
@@ -200,10 +200,9 @@ async function deleteRow(id) {
 }
 
 // ── Export PDF ────────────────────────────────────────────────
-// Retorna o repasse correto: usa edit do usuário se existir, senão usa o valor do registro
+// Retorna o repasse correto: usa edit do usuário (por referência de objeto) se existir
 function getRepasse(l) {
-  const key = String(l.id).trim();
-  return key in repasseEdits ? repasseEdits[key] : Number(l.repasse);
+  return repasseEdits.has(l) ? repasseEdits.get(l) : Number(l.repasse);
 }
 
 async function exportPDF() {
@@ -429,14 +428,11 @@ async function saveRepasse(span, id) {
       return;
     }
 
-    // Guarda o edit no Map global — fonte de verdade independente de referências
-    repasseEdits[String(id)] = novoVal;
-
-    // Atualiza em memória (melhor esforço)
-    [allLancamentos, filteredLancamentos].forEach(arr => {
-      const item = arr.find(l => String(l.id).trim() === String(id).trim());
-      if (item) item.repasse = novoVal;
-    });
+    // Atualiza em memória e marca no WeakMap pelo objeto (não pelo ID)
+    const itemA = allLancamentos.find(l => String(l.id).trim() === String(id).trim());
+    if (itemA) { itemA.repasse = novoVal; repasseEdits.set(itemA, novoVal); }
+    const itemF = filteredLancamentos.find(l => String(l.id).trim() === String(id).trim());
+    if (itemF && itemF !== itemA) { itemF.repasse = novoVal; repasseEdits.set(itemF, novoVal); }
 
     // Atualiza o span diretamente (sem re-renderizar a tabela toda)
     span.dataset.val        = novoVal;

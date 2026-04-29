@@ -136,7 +136,10 @@ function renderTable() {
     const isConvenio = l.tipo === 'Convênio';
     const repasseCell = l.glosado
       ? `<span style="color:var(--danger);font-weight:700;text-decoration:line-through">${formatCurrency(l.repasse)}</span> <span class="badge badge-glosado">GLOSADO</span>`
-      : `<span style="color:var(--primary);font-weight:700">${formatCurrency(l.repasse)}</span>`;
+      : `<span class="repasse-valor" data-id="${l.id}" data-val="${l.repasse}"
+              style="color:var(--primary);font-weight:700;cursor:pointer;border-bottom:1.5px dashed var(--primary)"
+              title="Duplo clique para editar"
+              ondblclick="editRepasse(this)">${formatCurrency(l.repasse)}</span>`;
 
     const btnGlosa = isConvenio
       ? `<button class="btn-action ${l.glosado ? 'btn-unglose' : 'btn-glose'}"
@@ -360,6 +363,73 @@ async function exportPDF() {
   const nomeArq = `repasse_${dentista.replace(/\s+/g,'_')}_${periodoStr.replace(/\//g,'-') || 'geral'}.pdf`;
   doc.save(nomeArq);
   showToast('PDF gerado com sucesso!');
+}
+
+// ── Edição inline de Repasse ──────────────────────────────────
+function editRepasse(span) {
+  // Evita abrir dois inputs ao mesmo tempo
+  if (span.querySelector('input')) return;
+
+  const id      = span.dataset.id;
+  const valAtual = parseFloat(span.dataset.val) || 0;
+
+  span.style.borderBottom = 'none';
+  span.innerHTML = `
+    <input
+      id="repasseInput_${id}"
+      type="number"
+      min="0" step="0.01"
+      value="${valAtual.toFixed(2)}"
+      style="width:90px;padding:.2rem .4rem;font-size:.85rem;font-weight:700;
+             border:2px solid var(--primary);border-radius:5px;color:var(--primary);
+             font-family:Poppins,sans-serif;outline:none;"
+      onblur="saveRepasse(this,'${id}')"
+      onkeydown="if(event.key==='Enter'){this.blur()}else if(event.key==='Escape'){cancelRepasse(this,'${id}',${valAtual})}"
+    >`;
+
+  const input = document.getElementById(`repasseInput_${id}`);
+  input.focus();
+  input.select();
+}
+
+async function saveRepasse(input, id) {
+  const novoVal = parseFloat(input.value);
+  if (isNaN(novoVal) || novoVal < 0) {
+    cancelRepasse(input, id, parseFloat(input.closest('.repasse-valor').dataset.val));
+    return;
+  }
+
+  const span = input.closest('.repasse-valor');
+  span.innerHTML = '<span style="color:var(--text-muted);font-size:.75rem">Salvando…</span>';
+
+  try {
+    const res = await apiCall({ action: 'updateRepasse', id, repasse: novoVal });
+    if (res.error) { showToast(res.error, 'error'); }
+    else {
+      // Atualiza localmente
+      const item = allLancamentos.find(l => l.id === id);
+      if (item) item.repasse = novoVal;
+      showToast('Repasse atualizado!');
+    }
+  } catch { showToast('Erro ao salvar repasse', 'error'); }
+
+  // Re-renderiza a célula com o valor novo
+  const item = allLancamentos.find(l => l.id === id);
+  if (item) {
+    span.dataset.val = item.repasse;
+    span.style.borderBottom = '1.5px dashed var(--primary)';
+    span.innerHTML = formatCurrency(item.repasse);
+    span.ondblclick = () => editRepasse(span);
+  }
+  renderSummary();
+}
+
+function cancelRepasse(input, id, valOriginal) {
+  const span = input.closest('.repasse-valor');
+  span.dataset.val = valOriginal;
+  span.style.borderBottom = '1.5px dashed var(--primary)';
+  span.innerHTML = formatCurrency(valOriginal);
+  span.ondblclick = () => editRepasse(span);
 }
 
 function showLoader(show) {

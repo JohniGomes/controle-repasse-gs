@@ -367,73 +367,82 @@ async function exportPDF() {
 
 // ── Edição inline de Repasse ──────────────────────────────────
 function editRepasse(span) {
-  // Evita abrir dois inputs ao mesmo tempo
   if (span.querySelector('input')) return;
 
-  const id      = span.dataset.id;
+  const id       = span.dataset.id;
   const valAtual = parseFloat(span.dataset.val) || 0;
 
-  span.style.borderBottom = 'none';
+  // Guarda o valor original no próprio span para restaurar se necessário
+  span.dataset.valOriginal = valAtual;
+  span.style.borderBottom  = 'none';
   span.innerHTML = `
     <input
-      id="repasseInput_${id}"
-      type="number"
-      min="0" step="0.01"
+      type="number" min="0" step="0.01"
       value="${valAtual.toFixed(2)}"
       style="width:90px;padding:.2rem .4rem;font-size:.85rem;font-weight:700;
              border:2px solid var(--primary);border-radius:5px;color:var(--primary);
              font-family:Poppins,sans-serif;outline:none;"
-      onblur="saveRepasse(this,'${id}')"
-      onkeydown="if(event.key==='Enter'){this.blur()}else if(event.key==='Escape'){cancelRepasse(this,'${id}',${valAtual})}"
     >`;
 
-  const input = document.getElementById(`repasseInput_${id}`);
+  const input = span.querySelector('input');
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  input.blur();
+    if (e.key === 'Escape') { span.dataset.val = valAtual; restoreSpan(span, valAtual); }
+  });
+
+  input.addEventListener('blur', () => saveRepasse(span, id));
+
   input.focus();
   input.select();
 }
 
-async function saveRepasse(input, id) {
-  const novoVal = parseFloat(input.value);
+async function saveRepasse(span, id) {
+  const input    = span.querySelector('input');
+  if (!input) return;                          // já foi processado
+  const novoVal  = parseFloat(input.value);
+  const valOrig  = parseFloat(span.dataset.valOriginal) || 0;
+
   if (isNaN(novoVal) || novoVal < 0) {
-    cancelRepasse(input, id, parseFloat(input.closest('.repasse-valor').dataset.val));
+    restoreSpan(span, valOrig);
     return;
   }
 
-  const span = input.closest('.repasse-valor');
-  span.innerHTML = '<span style="color:var(--text-muted);font-size:.75rem">Salvando…</span>';
+  // Mostra "Salvando…" enquanto aguarda
+  input.disabled = true;
+  input.style.opacity = '.5';
 
   try {
     const res = await apiCall({ action: 'updateRepasse', id, repasse: novoVal });
+
     if (res.error) {
-      showToast(res.error, 'error');
-      // Restaura valor original na célula
-      span.dataset.val = valAtual;
-      span.style.borderBottom = '1.5px dashed var(--primary)';
-      span.innerHTML = formatCurrency(valAtual);
-      span.ondblclick = () => editRepasse(span);
+      showToast('Erro: ' + res.error, 'error');
+      restoreSpan(span, valOrig);
       return;
     }
-    // Atualiza no array principal
-    const item = allLancamentos.find(l => l.id === id);
-    if (item) item.repasse = novoVal;
+
+    // Sucesso — atualiza os dois arrays e a célula
+    const itemA = allLancamentos.find(l => l.id === id);
+    const itemF = filteredLancamentos.find(l => l.id === id);
+    if (itemA) itemA.repasse = novoVal;
+    if (itemF) itemF.repasse = novoVal;
+
+    span.dataset.val = novoVal;
+    restoreSpan(span, novoVal);
+    renderSummary();
     showToast('Repasse atualizado!');
-    // Re-aplica filtros para garantir que tabela e PDF ficam sincronizados
-    applyFilters();
+
   } catch (e) {
-    showToast('Erro ao salvar repasse', 'error');
-    span.dataset.val = valAtual;
-    span.style.borderBottom = '1.5px dashed var(--primary)';
-    span.innerHTML = formatCurrency(valAtual);
-    span.ondblclick = () => editRepasse(span);
+    showToast('Erro de conexão ao salvar repasse', 'error');
+    restoreSpan(span, valOrig);
   }
 }
 
-function cancelRepasse(input, id, valOriginal) {
-  const span = input.closest('.repasse-valor');
-  span.dataset.val = valOriginal;
-  span.style.borderBottom = '1.5px dashed var(--primary)';
-  span.innerHTML = formatCurrency(valOriginal);
-  span.ondblclick = () => editRepasse(span);
+function restoreSpan(span, valor) {
+  span.dataset.val         = valor;
+  span.style.borderBottom  = '1.5px dashed var(--primary)';
+  span.innerHTML           = formatCurrency(valor);
+  span.ondblclick          = () => editRepasse(span);
 }
 
 function showLoader(show) {

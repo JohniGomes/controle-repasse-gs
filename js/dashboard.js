@@ -7,6 +7,7 @@ let filteredLancamentos = [];
 let dentistasDB = [];
 let conveniosDB = [];
 let chartInstances = {};
+const repasseEdits = {};   // id → valor editado pelo usuário (fonte de verdade)
 
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
@@ -199,15 +200,13 @@ async function deleteRow(id) {
 }
 
 // ── Export PDF ────────────────────────────────────────────────
-async function exportPDF() {
-  // Sincroniza valores visíveis no DOM → filteredLancamentos (fonte de verdade = tela)
-  document.querySelectorAll('.repasse-valor').forEach(s => {
-    const domVal = parseFloat(s.dataset.val);
-    if (isNaN(domVal)) return;
-    const item = filteredLancamentos.find(l => String(l.id) === String(s.dataset.id));
-    if (item) item.repasse = domVal;
-  });
+// Retorna o repasse correto: usa edit do usuário se existir, senão usa o valor do registro
+function getRepasse(l) {
+  const key = String(l.id).trim();
+  return key in repasseEdits ? repasseEdits[key] : Number(l.repasse);
+}
 
+async function exportPDF() {
   if (!filteredLancamentos.length) {
     showToast('Nenhum dado para exportar', 'warning'); return;
   }
@@ -271,7 +270,7 @@ async function exportPDF() {
 
   const ativos   = filteredLancamentos.filter(l => !l.glosado);
   const glosados = filteredLancamentos.filter(l =>  l.glosado);
-  const totalRep = ativos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
+  const totalRep = ativos.reduce((s, l) => s + getRepasse(l), 0);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryRGB);
@@ -292,7 +291,7 @@ async function exportPDF() {
     l.dente || '—',
     l.tipo,
     l.convenio || '—',
-    formatCurrency(l.repasse)
+    formatCurrency(getRepasse(l))
   ]);
 
   const dangerRGB = [220, 38, 38];
@@ -430,17 +429,20 @@ async function saveRepasse(span, id) {
       return;
     }
 
-    // Atualiza em memória
-    const itemA = allLancamentos.find(l => String(l.id) === String(id));
-    if (itemA) { itemA.repasse = novoVal; } else { console.warn('saveRepasse: ID não encontrado em allLancamentos', id); }
-    const itemF = filteredLancamentos.find(l => String(l.id) === String(id));
-    if (itemF) { itemF.repasse = novoVal; } else { console.warn('saveRepasse: ID não encontrado em filteredLancamentos', id); }
+    // Guarda o edit no Map global — fonte de verdade independente de referências
+    repasseEdits[String(id)] = novoVal;
+
+    // Atualiza em memória (melhor esforço)
+    [allLancamentos, filteredLancamentos].forEach(arr => {
+      const item = arr.find(l => String(l.id).trim() === String(id).trim());
+      if (item) item.repasse = novoVal;
+    });
 
     // Atualiza o span diretamente (sem re-renderizar a tabela toda)
-    span.dataset.val    = novoVal;
+    span.dataset.val        = novoVal;
     span.style.borderBottom = '1.5px dashed var(--primary)';
-    span.innerHTML      = formatCurrency(novoVal);
-    span.ondblclick     = () => editRepasse(span);
+    span.innerHTML          = formatCurrency(novoVal);
+    span.ondblclick         = () => editRepasse(span);
 
     // Atualiza só os cards de resumo
     renderSummary();

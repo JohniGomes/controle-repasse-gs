@@ -51,12 +51,7 @@ function populateFiltersFromData() {
     o.value = d; o.textContent = d; dSel.appendChild(o);
   });
 
-  const convenios = [...new Set(allLancamentos.map(l => l.convenio).filter(Boolean))].sort();
-  const cSel = document.getElementById('filterConvenio');
-  convenios.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c; cSel.appendChild(o);
-  });
+  // Filtro de tipo é fixo (Particular / Convênio) — não popula dinamicamente
 }
 
 // ── Filtros ───────────────────────────────────────────────────
@@ -84,7 +79,7 @@ function applyFilters() {
   filteredLancamentos = allLancamentos.filter(l => {
     if (dentista     && l.dentista.trim()     !== dentista.trim())     return false;
     if (procedimento && l.procedimento.trim() !== procedimento.trim()) return false;
-    if (convenio     && (l.convenio || '').trim() !== convenio.trim()) return false;
+    if (convenio     && l.tipo.trim()         !== convenio.trim())     return false;
 
     const d = String(l.data).slice(0, 10);
     if (activePeriod === 'month') {
@@ -319,11 +314,26 @@ async function exportPDF() {
     },
     didDrawPage: (data) => {
       const pageH = doc.internal.pageSize.height;
-      doc.setFontSize(7);
-      doc.setTextColor(150);
+      const pageW = doc.internal.pageSize.width;
+
+      // Linha separadora
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(14, pageH - 22, pageW - 14, pageH - 22);
+
+      // Bloco de dados NF (esquerda)
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Dados para emissão de NF', 14, pageH - 18);
       doc.setFont('helvetica', 'normal');
-      doc.text('Centro Clínico GS — Relatório de Repasse', 14, pageH - 8);
-      doc.text(`Página ${data.pageNumber}`, 283, pageH - 8, { align: 'right' });
+      doc.setTextColor(100, 100, 100);
+      doc.text('CNPJ: 54.908.515/0001-13   |   GS Centro Clínico e Odontológico   |   gscentroclinicoeodontologico@gmail.com', 14, pageH - 13);
+
+      // Número de página (direita)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text(`Página ${data.pageNumber}`, pageW - 14, pageH - 13, { align: 'right' });
     }
   });
 

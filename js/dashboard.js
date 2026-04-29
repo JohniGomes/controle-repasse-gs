@@ -332,19 +332,29 @@ async function exportPDF() {
   doc.text(`TOTAL REPASSE AO DENTISTA: ${formatCurrency(totalRep)}`, 148, finalY + 7.5, { align: 'center' });
 
   // ── Dados para emissão de NF (última página, abaixo do total) ─
-  const nfY = finalY + 20;
+  const pageH   = doc.internal.pageSize.height;
+  const pageW   = doc.internal.pageSize.width;
+  const nfHeight = 36; // altura necessária para o bloco de NF
+  let nfY = finalY + 18;
+
+  // Se não cabe na página atual, abre nova página
+  if (nfY + nfHeight > pageH - 15) {
+    doc.addPage();
+    nfY = 20;
+  }
+
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.3);
-  doc.line(14, nfY, 283, nfY);
-  doc.setFontSize(7);
+  doc.line(14, nfY, pageW - 14, nfY);
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(60, 60, 60);
-  doc.text('Dados para emissão de NF', 14, nfY + 6);
+  doc.text('Dados para emissão de NF', 14, nfY + 7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text('CNPJ: 54.908.515/0001-13', 14, nfY + 12);
-  doc.text('GS Centro Clínico e Odontológico', 14, nfY + 18);
-  doc.text('gscentroclinicoeodontologico@gmail.com', 14, nfY + 24);
+  doc.text('CNPJ: 54.908.515/0001-13', 14, nfY + 14);
+  doc.text('GS Centro Clínico e Odontológico', 14, nfY + 21);
+  doc.text('gscentroclinicoeodontologico@gmail.com', 14, nfY + 28);
 
   // Salvar
   const nomeArq = `repasse_${dentista.replace(/\s+/g,'_')}_${periodoStr.replace(/\//g,'-') || 'geral'}.pdf`;

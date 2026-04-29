@@ -200,9 +200,6 @@ async function deleteRow(id) {
 
 // ── Export PDF ────────────────────────────────────────────────
 async function exportPDF() {
-  // Garante que filteredLancamentos reflete o estado atual de allLancamentos
-  applyFilters();
-
   if (!filteredLancamentos.length) {
     showToast('Nenhum dado para exportar', 'warning'); return;
   }
@@ -427,9 +424,9 @@ async function saveRepasse(span, id) {
 
     // Atualiza em memória
     const itemA = allLancamentos.find(l => String(l.id) === String(id));
-    if (itemA) itemA.repasse = novoVal;
+    if (itemA) { itemA.repasse = novoVal; } else { console.warn('saveRepasse: ID não encontrado em allLancamentos', id); }
     const itemF = filteredLancamentos.find(l => String(l.id) === String(id));
-    if (itemF) itemF.repasse = novoVal;
+    if (itemF) { itemF.repasse = novoVal; } else { console.warn('saveRepasse: ID não encontrado em filteredLancamentos', id); }
 
     // Atualiza o span diretamente (sem re-renderizar a tabela toda)
     span.dataset.val    = novoVal;

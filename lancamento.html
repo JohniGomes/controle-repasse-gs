@@ -83,9 +83,14 @@
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label class="form-label">Procedimento *</label>
-              <select id="procedimento" class="form-select" required onchange="calcularRepasse()">
-                <option value="">Selecione...</option>
-              </select>
+              <div class="input-group">
+                <select id="procedimento" class="form-select" required onchange="calcularRepasse()">
+                  <option value="">Selecione...</option>
+                </select>
+                <button type="button" class="btn btn-success btn-icon" title="Cadastrar novo procedimento" onclick="openModal('modalAddProcedimento')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -181,14 +186,20 @@
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label class="form-label">Repasse ao Dentista</label>
-              <div style="display:flex;align-items:center;gap:.8rem">
-                <input type="hidden" id="repasse">
+              <input type="hidden" id="repasse">
+              <!-- Repasse automático (procedimento com valor fixo ou convênio) -->
+              <div id="repasseAutoWrap" style="display:flex;align-items:center;gap:.8rem">
                 <div style="flex:1;padding:.55rem .85rem;background:#f8faff;border:1.5px solid var(--border);border-radius:8px;font-weight:700;color:var(--primary);font-size:1rem">
                   <span id="repasseDisplay">—</span>
                 </div>
                 <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap" id="repasseInfo">
                   Selecione o procedimento
                 </span>
+              </div>
+              <!-- Repasse manual (procedimento personalizado + particular) -->
+              <div id="repasseManualWrap" style="display:none">
+                <input type="number" id="repasseManualInput" class="form-control" placeholder="Informe o valor do repasse (R$)" min="0" step="0.01" oninput="updateRepasseManual()">
+                <span style="font-size:.75rem;color:var(--text-muted)">Procedimento personalizado — informe o repasse manualmente</span>
               </div>
             </div>
           </div>
@@ -234,6 +245,25 @@
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closeModal('modalAddConvenio')">Cancelar</button>
         <button class="btn btn-success" onclick="addConvenio()">Cadastrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar Procedimento -->
+  <div class="modal-overlay" id="modalAddProcedimento">
+    <div class="modal-box">
+      <h3>Cadastrar Procedimento</h3>
+      <div class="form-group">
+        <label class="form-label">Nome do procedimento</label>
+        <input type="text" id="newProcedimentoName" class="form-control" placeholder="Ex: DOCUMENTAÇÃO ORTOD."
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addProcedimento()}">
+      </div>
+      <p style="font-size:.78rem;color:var(--text-muted);margin-top:-.25rem">
+        Repasse para Convênio: 35% automático. Para Particular: você informa na hora do lançamento.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal('modalAddProcedimento')">Cancelar</button>
+        <button class="btn btn-success" onclick="addProcedimento()">Cadastrar</button>
       </div>
     </div>
   </div>

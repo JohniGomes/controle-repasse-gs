@@ -7,7 +7,7 @@ let filteredLancamentos = [];
 let dentistasDB = [];
 let conveniosDB = [];
 let chartInstances = {};
-const repasseEdits = new WeakMap(); // objeto → valor editado (independe de ID)
+const repasseEdits = new Map(); // _uid → valor editado pelo usuário
 
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
@@ -24,8 +24,9 @@ async function loadAllData() {
   try {
     const res = await apiCall({ action: 'getLancamentos' });
     if (res.error) { showToast('Erro: ' + res.error, 'error'); return; }
-    allLancamentos = (res.data || []).map(l => ({
+    allLancamentos = (res.data || []).map((l, i) => ({
       ...l,
+      _uid: i,                                      // índice único local (imune a IDs duplicados)
       data: normalizeDate(l.data, l.timestamp)
     }));
   } catch (e) {
@@ -116,8 +117,8 @@ function clearFilters() {
 function renderSummary() {
   const ativos   = filteredLancamentos.filter(l => !l.glosado);
   const glosados = filteredLancamentos.filter(l =>  l.glosado);
-  const totalVal = ativos.reduce((s, l) => s + (Number(l.valor)   || 0), 0);
-  const totalRep = ativos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
+  const totalVal = ativos.reduce((s, l) => s + (Number(l.valor) || 0), 0);
+  const totalRep = ativos.reduce((s, l) => s + getRepasse(l), 0);
 
   document.getElementById('summaryQtd').textContent =
     filteredLancamentos.length + (glosados.length ? ` (${glosados.length} glosado${glosados.length > 1 ? 's' : ''})` : '');
@@ -137,14 +138,14 @@ function renderTable() {
     const isConvenio = l.tipo === 'Convênio';
     const repasseCell = l.glosado
       ? `<span style="color:var(--danger);font-weight:700;text-decoration:line-through">${formatCurrency(l.repasse)}</span> <span class="badge badge-glosado">GLOSADO</span>`
-      : `<span class="repasse-valor" data-id="${l.id}" data-val="${l.repasse}"
+      : `<span class="repasse-valor" data-uid="${l._uid}" data-row="${l.row}" data-val="${l.repasse}"
               style="color:var(--primary);font-weight:700;cursor:pointer;border-bottom:1.5px dashed var(--primary)"
               title="Duplo clique para editar"
-              ondblclick="editRepasse(this)">${formatCurrency(l.repasse)}</span>`;
+              ondblclick="editRepasse(this)">${formatCurrency(getRepasse(l))}</span>`;
 
     const btnGlosa = isConvenio
       ? `<button class="btn-action ${l.glosado ? 'btn-unglose' : 'btn-glose'}"
-           onclick="toggleGlosa('${l.id}',${l.glosado})"
+           onclick="toggleGlosa(${l._uid})"
            title="${l.glosado ? 'Remover glosa' : 'Marcar como glosado'}">
            ${l.glosado
              ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
@@ -166,7 +167,7 @@ function renderTable() {
       <td>${repasseCell}</td>
       <td class="td-actions">
         ${btnGlosa}
-        <button class="btn-action btn-del" onclick="deleteRow('${l.id}')" title="Excluir lançamento">
+        <button class="btn-action btn-del" onclick="deleteRow(${l._uid})" title="Excluir lançamento">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </td>
@@ -175,34 +176,38 @@ function renderTable() {
 }
 
 // ── Glosa ─────────────────────────────────────────────────────
-async function toggleGlosa(id, current) {
-  const novo = !current;
+async function toggleGlosa(uid) {
+  const item = allLancamentos.find(l => l._uid === uid);
+  if (!item) return;
+  const novo = !item.glosado;
   try {
-    const res = await apiCall({ action: 'updateGlosa', id, glosado: novo });
+    const res = await apiCall({ action: 'updateGlosa', row: item.row, glosado: novo });
     if (res.error) { showToast(res.error, 'error'); return; }
-    const item = allLancamentos.find(l => l.id === id);
-    if (item) item.glosado = novo;
+    item.glosado = novo;
     applyFilters();
     showToast(novo ? 'Marcado como glosado' : 'Glosa removida');
   } catch { showToast('Erro ao atualizar glosa', 'error'); }
 }
 
 // ── Excluir linha ─────────────────────────────────────────────
-async function deleteRow(id) {
+async function deleteRow(uid) {
   if (!confirm('Excluir este lançamento? A ação não pode ser desfeita.')) return;
+  const item = allLancamentos.find(l => l._uid === uid);
+  if (!item) return;
   try {
-    const res = await apiCall({ action: 'deleteLancamento', id });
+    const res = await apiCall({ action: 'deleteLancamento', row: item.row });
     if (res.error) { showToast(res.error, 'error'); return; }
-    allLancamentos = allLancamentos.filter(l => l.id !== id);
+    allLancamentos = allLancamentos.filter(l => l._uid !== uid);
+    repasseEdits.delete(uid);
     applyFilters();
     showToast('Lançamento excluído');
   } catch { showToast('Erro ao excluir', 'error'); }
 }
 
 // ── Export PDF ────────────────────────────────────────────────
-// Retorna o repasse correto: usa edit do usuário (por referência de objeto) se existir
+// Retorna o repasse correto: usa edit do usuário (por _uid) se existir
 function getRepasse(l) {
-  return repasseEdits.has(l) ? repasseEdits.get(l) : Number(l.repasse);
+  return repasseEdits.has(l._uid) ? repasseEdits.get(l._uid) : Number(l.repasse);
 }
 
 async function exportPDF() {
@@ -375,7 +380,7 @@ async function exportPDF() {
 function editRepasse(span) {
   if (span.querySelector('input')) return;
 
-  const id       = span.dataset.id;
+  const uid      = parseInt(span.dataset.uid);
   const valAtual = parseFloat(span.dataset.val) || 0;
 
   // Guarda o valor original no próprio span para restaurar se necessário
@@ -397,13 +402,13 @@ function editRepasse(span) {
     if (e.key === 'Escape') { span.dataset.val = valAtual; restoreSpan(span, valAtual); }
   });
 
-  input.addEventListener('blur', () => saveRepasse(span, id));
+  input.addEventListener('blur', () => saveRepasse(span, uid));
 
   input.focus();
   input.select();
 }
 
-async function saveRepasse(span, id) {
+async function saveRepasse(span, uid) {
   const input = span.querySelector('input');
   if (!input || input.dataset.saving) return;   // evita duplo disparo
   input.dataset.saving = '1';
@@ -419,8 +424,11 @@ async function saveRepasse(span, id) {
   input.disabled = true;
   input.style.opacity = '.5';
 
+  const item = allLancamentos.find(l => l._uid === uid);
+  if (!item) { restoreSpan(span, valOrig); return; }
+
   try {
-    const res = await apiCall({ action: 'updateRepasse', id, repasse: novoVal });
+    const res = await apiCall({ action: 'updateRepasse', row: item.row, repasse: novoVal });
 
     if (res.error) {
       showToast('Erro: ' + res.error, 'error');
@@ -428,19 +436,15 @@ async function saveRepasse(span, id) {
       return;
     }
 
-    // Atualiza em memória e marca no WeakMap pelo objeto (não pelo ID)
-    const itemA = allLancamentos.find(l => String(l.id).trim() === String(id).trim());
-    if (itemA) { itemA.repasse = novoVal; repasseEdits.set(itemA, novoVal); }
-    const itemF = filteredLancamentos.find(l => String(l.id).trim() === String(id).trim());
-    if (itemF && itemF !== itemA) { itemF.repasse = novoVal; repasseEdits.set(itemF, novoVal); }
+    // Salva pelo _uid — imune a IDs duplicados
+    repasseEdits.set(uid, novoVal);
+    item.repasse = novoVal;
 
-    // Atualiza o span diretamente (sem re-renderizar a tabela toda)
     span.dataset.val        = novoVal;
     span.style.borderBottom = '1.5px dashed var(--primary)';
     span.innerHTML          = formatCurrency(novoVal);
     span.ondblclick         = () => editRepasse(span);
 
-    // Atualiza só os cards de resumo
     renderSummary();
     showToast('Repasse atualizado!');
 

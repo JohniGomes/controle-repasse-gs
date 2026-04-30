@@ -53,10 +53,8 @@ function renderCategoriaSelects() {
 function renderSummary() {
   const total   = estoqueData.length;
   const critico = estoqueData.filter(i => Number(i.qtdAtual) === 0).length;
-  const baixo   = estoqueData.filter(i => Number(i.qtdAtual) > 0 && Number(i.qtdAtual) < Number(i.qtdMin)).length;
 
   document.getElementById('summaryTotal').textContent   = total;
-  document.getElementById('summaryBaixo').textContent   = baixo;
   document.getElementById('summaryCritico').textContent = critico;
 }
 
@@ -76,7 +74,7 @@ function renderTabela() {
 
   const tbody = document.getElementById('estoqueBody');
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Nenhum item encontrado.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhum item encontrado.</p></div></td></tr>';
     return;
   }
 
@@ -95,10 +93,9 @@ function renderTabela() {
     <tr>
       <td style="font-weight:600">${item.nome}</td>
       <td><span style="font-size:.8rem;color:var(--text-muted)">${item.categoria || '—'}</span></td>
-      <td style="font-weight:700;color:${st === 'critico' ? 'var(--danger)' : st === 'baixo' ? 'var(--warning)' : 'var(--success)'}">
+      <td style="font-weight:700;color:${st === 'critico' ? 'var(--danger)' : 'var(--success)'}">
         ${item.qtdAtual}
       </td>
-      <td style="color:var(--text-muted)">${item.qtdMin}</td>
       <td>${badgeHtml}</td>
       <td style="color:var(--text-muted);font-size:.82rem">${formatDate(item.ultimoReabastecimento) || '—'}</td>
       <td class="td-actions">
@@ -117,18 +114,13 @@ function renderTabela() {
 }
 
 function getStatus(item) {
-  const qtd = Number(item.qtdAtual);
-  const min = Number(item.qtdMin);
-  if (qtd === 0)       return 'critico';
-  if (qtd < min)       return 'baixo';
-  return 'ok';
+  return Number(item.qtdAtual) === 0 ? 'critico' : 'ok';
 }
 
 function statusBadge(st) {
   const map = {
-    ok:      { label: 'OK',       color: '#16a34a', bg: '#dcfce7' },
-    baixo:   { label: 'Baixo',    color: '#d97706', bg: '#fef3c7' },
-    critico: { label: 'Crítico',  color: '#dc2626', bg: '#fee2e2' }
+    ok:      { label: 'Em estoque', color: '#16a34a', bg: '#dcfce7' },
+    critico: { label: 'Zerado',     color: '#dc2626', bg: '#fee2e2' }
   };
   const { label, color, bg } = map[st] || map.ok;
   return `<span style="display:inline-block;padding:.18rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;background:${bg};color:${color};text-transform:uppercase;letter-spacing:.3px">${label}</span>`;
@@ -149,8 +141,6 @@ function abrirEditar(rowIndex) {
   document.getElementById('editRowIndex').value  = rowIndex;
   document.getElementById('itemNome').value      = item.nome;
   document.getElementById('itemQtdAtual').value  = item.qtdAtual;
-  document.getElementById('itemQtdMin').value    = item.qtdMin;
-  // Garante que a categoria existe no select antes de setar
   renderCategoriaSelects();
   document.getElementById('itemCategoria').value = item.categoria;
   openModal('modalAddItem');
@@ -162,7 +152,6 @@ function limparModalItem() {
   document.getElementById('itemNome').value      = '';
   document.getElementById('itemCategoria').value = '';
   document.getElementById('itemQtdAtual').value  = '';
-  document.getElementById('itemQtdMin').value    = '';
 }
 
 // Abre modal de novo item com campos limpos
@@ -173,10 +162,9 @@ async function salvarItem() {
   const nome     = document.getElementById('itemNome').value.trim();
   const categoria= document.getElementById('itemCategoria').value;
   const qtdAtual = document.getElementById('itemQtdAtual').value;
-  const qtdMin   = document.getElementById('itemQtdMin').value;
   const rowIndex = document.getElementById('editRowIndex').value;
 
-  if (!nome || !categoria || qtdAtual === '' || qtdMin === '') {
+  if (!nome || !categoria || qtdAtual === '') {
     showToast('Preencha todos os campos obrigatórios', 'warning'); return;
   }
 
@@ -188,7 +176,7 @@ async function salvarItem() {
       action: rowIndex ? 'updateItemEstoque' : 'addItemEstoque',
       nome, categoria,
       qtdAtual: Number(qtdAtual),
-      qtdMin:   Number(qtdMin)
+      qtdMin:   0
     };
     if (rowIndex) params.rowIndex = rowIndex;
 

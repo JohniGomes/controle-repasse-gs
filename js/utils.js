@@ -3,13 +3,25 @@
 // ============================================================
 
 function checkAuth() {
-  if (!sessionStorage.getItem('cgs_auth')) {
-    window.location.href = 'index.html';
+  const auth = sessionStorage.getItem('cgs_auth');
+  if (!auth) { window.location.href = 'index.html'; return; }
+
+  const role    = sessionStorage.getItem('cgs_role') || 'admin';
+  const current = location.pathname.split('/').pop() || 'index.html';
+
+  // Usuário estoque só pode ver estoque.html
+  if (role === 'estoque' && current !== 'estoque.html') {
+    window.location.href = 'estoque.html';
   }
+}
+
+function getUserRole() {
+  return sessionStorage.getItem('cgs_role') || 'admin';
 }
 
 function logout() {
   sessionStorage.removeItem('cgs_auth');
+  sessionStorage.removeItem('cgs_role');
   window.location.href = 'index.html';
 }
 

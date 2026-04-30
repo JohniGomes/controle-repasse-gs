@@ -6,7 +6,10 @@ const CONFIG = {
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz1u3RCkujoHYt3c1sGWdIN7W8wHNnS5AHeHarvhYV199etWu7NFNWpjKkgkiUOOfZwcA/exec',
   USERNAME: 'AndressaGS',
   PASSWORD: 'centrogs2025',
-  CLINIC_NAME: 'Centro Clínico GS'
+  CLINIC_NAME: 'Centro Clínico GS',
+  // Usuário com acesso apenas ao estoque
+  ESTOQUE_USERNAME: 'estoque',
+  ESTOQUE_PASSWORD: 'estoque2025'
 };
 
 // Tabela de repasse fixo para atendimentos Particulares

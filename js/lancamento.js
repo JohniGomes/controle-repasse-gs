@@ -4,14 +4,14 @@
 
 let dentistas = [];
 let convenios = [];
+let procedimentosCustom = [];
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
   setDefaultDate();
-  populateProcedimentos();
   showLoader(true);
-  await Promise.all([loadDentistas(), loadConvenios()]);
+  await Promise.all([loadDentistas(), loadConvenios(), loadProcedimentos()]);
   showLoader(false);
 });
 
@@ -19,8 +19,21 @@ function setDefaultDate() {
   document.getElementById('data').value = todayISO();
 }
 
+// ── Procedimentos ─────────────────────────────────────────────
+async function loadProcedimentos() {
+  try {
+    const res = await apiCall({ action: 'getProcedimentos' });
+    procedimentosCustom = res.data || [];
+  } catch { /* usa só a lista estática */ }
+  populateProcedimentos();
+}
+
 function populateProcedimentos() {
   const sel = document.getElementById('procedimento');
+  // Limpa mantendo só o placeholder
+  sel.innerHTML = '<option value="">Selecione...</option>';
+
+  // Procedimentos fixos (config.js)
   PROCEDIMENTOS.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.nome;
@@ -28,6 +41,37 @@ function populateProcedimentos() {
     opt.textContent = p.nome;
     sel.appendChild(opt);
   });
+
+  // Procedimentos customizados (Google Sheets)
+  if (procedimentosCustom.length) {
+    const sep = document.createElement('option');
+    sep.disabled = true;
+    sep.textContent = '── Personalizados ──';
+    sel.appendChild(sep);
+
+    procedimentosCustom.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.nome;
+      opt.dataset.repasse = '';   // repasse manual para procedimentos customizados
+      opt.textContent = p.nome;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+async function addProcedimento() {
+  const nome = document.getElementById('newProcedimentoName').value.trim();
+  if (!nome) { showToast('Digite o nome do procedimento', 'warning'); return; }
+  try {
+    const res = await apiCall({ action: 'addProcedimento', nome });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    procedimentosCustom.push({ id: res.id, nome: res.nome });
+    populateProcedimentos();
+    document.getElementById('procedimento').value = res.nome;
+    closeModal('modalAddProcedimento');
+    calcularRepasse();
+    showToast('Procedimento cadastrado!');
+  } catch { showToast('Erro ao cadastrar procedimento', 'error'); }
 }
 
 // ── Dentistas ─────────────────────────────────────────────────
@@ -145,15 +189,30 @@ function calcularRepasse() {
   const sel    = document.getElementById('procedimento');
   const opt    = sel.options[sel.selectedIndex];
   let repasse  = 0;
+  let manual   = false;
 
   if (tipo === 'particular' && opt && opt.dataset.repasse) {
-    repasse = parseFloat(opt.dataset.repasse);
+    repasse = parseFloat(opt.dataset.repasse) || 0;
+    if (!repasse) manual = true;   // procedimento customizado sem repasse fixo
   } else if (tipo === 'convenio' && valor > 0) {
     repasse = valor * 0.35;
   }
 
-  document.getElementById('repasse').value = repasse > 0 ? repasse.toFixed(2) : '';
-  document.getElementById('repasseDisplay').textContent = repasse > 0 ? formatCurrency(repasse) : '—';
+  // Exibe campo manual se procedimento particular sem repasse fixo
+  const manualWrap = document.getElementById('repasseManualWrap');
+  const autoWrap   = document.getElementById('repasseAutoWrap');
+  if (manualWrap) manualWrap.style.display = manual ? '' : 'none';
+  if (autoWrap)   autoWrap.style.display   = manual ? 'none' : '';
+
+  if (!manual) {
+    document.getElementById('repasse').value = repasse > 0 ? repasse.toFixed(2) : '';
+    document.getElementById('repasseDisplay').textContent = repasse > 0 ? formatCurrency(repasse) : '—';
+  }
+}
+
+function updateRepasseManual() {
+  const v = parseFloat(document.getElementById('repasseManualInput').value) || 0;
+  document.getElementById('repasse').value = v > 0 ? v.toFixed(2) : '';
 }
 
 // ── Submit ────────────────────────────────────────────────────
@@ -207,8 +266,9 @@ async function salvarLancamento(e) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  document.getElementById('newDentistaName') && (document.getElementById('newDentistaName').value = '');
-  document.getElementById('newConvenioName') && (document.getElementById('newConvenioName').value = '');
+  document.getElementById('newDentistaName')     && (document.getElementById('newDentistaName').value     = '');
+  document.getElementById('newConvenioName')     && (document.getElementById('newConvenioName').value     = '');
+  document.getElementById('newProcedimentoName') && (document.getElementById('newProcedimentoName').value = '');
 }
 
 // Fechar modal clicando fora

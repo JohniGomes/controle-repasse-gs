@@ -40,16 +40,17 @@
       </form>
 
       <p style="margin-top:1.5rem; font-size:.72rem; color:#9ca3af;">
-        © 2026 Centro Clínico GS · Todos os direitos reservados
+        © 2025 Centro Clínico GS · Todos os direitos reservados
       </p>
     </div>
   </div>
 
   <script src="js/config.js"></script>
   <script>
-    // Já logado? Redireciona
+    // Já logado? Redireciona conforme role
     if (sessionStorage.getItem('cgs_auth')) {
-      window.location.href = 'lancamento.html';
+      const role = sessionStorage.getItem('cgs_role') || 'admin';
+      window.location.href = role === 'estoque' ? 'estoque.html' : 'lancamento.html';
     }
 
     document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -59,12 +60,17 @@
       const err = document.getElementById('loginError');
       const btn = document.getElementById('btnLogin');
 
-      if (u === CONFIG.USERNAME && p === CONFIG.PASSWORD) {
+      let role = null;
+      if (u === CONFIG.USERNAME && p === CONFIG.PASSWORD)               role = 'admin';
+      else if (u === CONFIG.ESTOQUE_USERNAME && p === CONFIG.ESTOQUE_PASSWORD) role = 'estoque';
+
+      if (role) {
         err.style.display = 'none';
         btn.innerHTML = '<span class="spinner"></span>';
         btn.disabled = true;
         sessionStorage.setItem('cgs_auth', '1');
-        setTimeout(() => window.location.href = 'lancamento.html', 600);
+        sessionStorage.setItem('cgs_role', role);
+        setTimeout(() => window.location.href = role === 'estoque' ? 'estoque.html' : 'lancamento.html', 600);
       } else {
         err.style.display = 'block';
         document.getElementById('password').value = '';

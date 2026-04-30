@@ -179,6 +179,7 @@ function renderTable() {
 async function toggleGlosa(uid) {
   const item = allLancamentos.find(l => l._uid === uid);
   if (!item) return;
+  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
   const novo = !item.glosado;
   try {
     const res = await apiCall({ action: 'updateGlosa', row: item.row, glosado: novo });
@@ -194,6 +195,7 @@ async function deleteRow(uid) {
   if (!confirm('Excluir este lançamento? A ação não pode ser desfeita.')) return;
   const item = allLancamentos.find(l => l._uid === uid);
   if (!item) return;
+  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
   try {
     const res = await apiCall({ action: 'deleteLancamento', row: item.row });
     if (res.error) { showToast(res.error, 'error'); return; }

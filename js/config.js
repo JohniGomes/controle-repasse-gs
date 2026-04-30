@@ -8,7 +8,7 @@ const CONFIG = {
   PASSWORD: 'centrogs2025',
   CLINIC_NAME: 'Centro Clínico GS',
   // Usuário com acesso apenas ao estoque
-  ESTOQUE_USERNAME: 'estoque',
+  ESTOQUE_USERNAME: 'DouglasGS',
   ESTOQUE_PASSWORD: 'estoque2025'
 };
 

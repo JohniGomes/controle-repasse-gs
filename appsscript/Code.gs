@@ -3,26 +3,30 @@
 // Deploy como Web App: Execute as "Me", Access "Anyone"
 // ============================================================
 
-const SHEET_LANCAMENTOS = 'Lancamentos';
-const SHEET_DENTISTAS   = 'Dentistas';
-const SHEET_CONVENIOS   = 'Convenios';
+const SHEET_LANCAMENTOS   = 'Lancamentos';
+const SHEET_DENTISTAS     = 'Dentistas';
+const SHEET_CONVENIOS     = 'Convenios';
+const SHEET_PROCEDIMENTOS = 'Procedimentos';
 
 function doGet(e) {
   const action = e.parameter.action;
   let result;
   try {
     switch (action) {
-      case 'getDentistas':    result = getDentistas();                              break;
-      case 'addDentista':     result = addDentista(e.parameter.nome);              break;
-      case 'deleteDentista':  result = deleteDentista(e.parameter.id);             break;
-      case 'getConvenios':    result = getConvenios();                             break;
-      case 'addConvenio':     result = addConvenio(e.parameter.nome);              break;
-      case 'deleteConvenio':  result = deleteConvenio(e.parameter.id);            break;
-      case 'addLancamento':   result = addLancamento(JSON.parse(e.parameter.data)); break;
-      case 'getLancamentos':  result = getLancamentos();                                          break;
-      case 'updateGlosa':     result = updateGlosa(e.parameter.id, e.parameter.glosado);        break;
-      case 'deleteLancamento':result = deleteLancamento(e.parameter.id);                        break;
-      default:                result = { error: 'Ação inválida' };
+      case 'getDentistas':      result = getDentistas();                                        break;
+      case 'addDentista':       result = addDentista(e.parameter.nome);                        break;
+      case 'deleteDentista':    result = deleteDentista(e.parameter.id);                      break;
+      case 'getConvenios':      result = getConvenios();                                       break;
+      case 'addConvenio':       result = addConvenio(e.parameter.nome);                       break;
+      case 'deleteConvenio':    result = deleteConvenio(e.parameter.id);                      break;
+      case 'getProcedimentos':  result = getProcedimentos();                                   break;
+      case 'addProcedimento':   result = addProcedimento(e.parameter.nome);                   break;
+      case 'addLancamento':     result = addLancamento(JSON.parse(e.parameter.data));         break;
+      case 'getLancamentos':    result = getLancamentos();                                     break;
+      case 'updateGlosa':       result = updateGlosa(e.parameter.row, e.parameter.glosado);   break;
+      case 'deleteLancamento':  result = deleteLancamento(e.parameter.row);                   break;
+      case 'updateRepasse':     result = updateRepasse(e.parameter.row, e.parameter.repasse); break;
+      default:                  result = { error: 'Ação inválida' };
     }
   } catch (err) {
     result = { error: err.toString() };
@@ -40,10 +44,12 @@ function getSheet(name) {
   if (!sheet) {
     sheet = ss.insertSheet(name);
     if (name === SHEET_LANCAMENTOS)
-      sheet.appendRow(['ID','Data','Dentista','Paciente','Procedimento','Tipo','Convenio','Valor','Repasse','Timestamp']);
+      sheet.appendRow(['ID','Data','Dentista','Paciente','Procedimento','Tipo','Convenio','Valor','Repasse','Timestamp','Glosado','Dente']);
     else if (name === SHEET_DENTISTAS)
       sheet.appendRow(['ID','Nome','Ativo']);
     else if (name === SHEET_CONVENIOS)
+      sheet.appendRow(['ID','Nome','Ativo']);
+    else if (name === SHEET_PROCEDIMENTOS)
       sheet.appendRow(['ID','Nome','Ativo']);
   }
   return sheet;
@@ -111,10 +117,29 @@ function deleteConvenio(id) {
   return { error: 'Convênio não encontrado' };
 }
 
+// ── Procedimentos customizados ────────────────────────────────
+
+function getProcedimentos() {
+  const sheet = getSheet(SHEET_PROCEDIMENTOS);
+  const data  = sheet.getDataRange().getValues();
+  const list  = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][2] !== false && String(data[i][2]).toUpperCase() !== 'FALSE')
+      list.push({ id: String(data[i][0]), nome: String(data[i][1]) });
+  }
+  return { success: true, data: list };
+}
+
+function addProcedimento(nome) {
+  if (!nome || !nome.trim()) return { error: 'Nome obrigatório' };
+  const id = uid();
+  getSheet(SHEET_PROCEDIMENTOS).appendRow([id, nome.trim(), true]);
+  return { success: true, id, nome: nome.trim() };
+}
+
 // ── Lançamentos ───────────────────────────────────────────────
 
 function fmtDate(v) {
-  // instanceof Date não é confiável no Apps Script — usa try/catch direto
   try {
     return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   } catch (e) {
@@ -132,7 +157,7 @@ function addLancamento(l) {
   getSheet(SHEET_LANCAMENTOS).appendRow([
     id, l.data, l.dentista, l.paciente, l.procedimento,
     l.tipo, l.convenio || '', Number(l.valor), Number(l.repasse),
-    new Date().toISOString(), false
+    new Date().toISOString(), false, l.dente || ''
   ]);
   return { success: true, id };
 }
@@ -144,40 +169,52 @@ function getLancamentos() {
     const d = data[i];
     list.push({
       id:           String(d[0]),
+      row:          i + 1,          // número real da linha no Sheets (para operações diretas)
       data:         fmtDate(d[1]),
-      dentista:     d[2],
-      paciente:     d[3],
-      procedimento: d[4],
-      tipo:         d[5],
-      convenio:     d[6],
+      dentista:     String(d[2] || ''),
+      paciente:     String(d[3] || ''),
+      procedimento: String(d[4] || ''),
+      tipo:         String(d[5] || ''),
+      convenio:     String(d[6] || ''),
       valor:        Number(d[7]),
       repasse:      Number(d[8]),
-      timestamp:    String(d[9]),
-      glosado:      d[10] === true || String(d[10]).toUpperCase() === 'TRUE'
+      timestamp:    String(d[9] || ''),
+      glosado:      d[10] === true || String(d[10]).toUpperCase() === 'TRUE',
+      dente:        String(d[11] || '')
     });
   }
   return { success: true, data: list };
 }
 
-function findRowById(sheet, id) {
-  const data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++)
-    if (String(data[i][0]) === String(id)) return i + 1;
-  return -1;
+// Operações usam número da linha diretamente — imune a IDs duplicados
+
+function updateGlosa(row, glosado) {
+  try {
+    const sheet = getSheet(SHEET_LANCAMENTOS);
+    sheet.getRange(parseInt(row), 11).setValue(glosado === 'true' || glosado === true);
+    SpreadsheetApp.flush();
+    return { success: true };
+  } catch(err) {
+    return { error: 'Erro ao atualizar glosa: ' + err.toString() };
+  }
 }
 
-function updateGlosa(id, glosado) {
-  const sheet = getSheet(SHEET_LANCAMENTOS);
-  const row   = findRowById(sheet, id);
-  if (row === -1) return { error: 'Lançamento não encontrado' };
-  sheet.getRange(row, 11).setValue(glosado === 'true' || glosado === true);
-  return { success: true };
+function deleteLancamento(row) {
+  try {
+    getSheet(SHEET_LANCAMENTOS).deleteRow(parseInt(row));
+    return { success: true };
+  } catch(err) {
+    return { error: 'Erro ao excluir: ' + err.toString() };
+  }
 }
 
-function deleteLancamento(id) {
-  const sheet = getSheet(SHEET_LANCAMENTOS);
-  const row   = findRowById(sheet, id);
-  if (row === -1) return { error: 'Lançamento não encontrado' };
-  sheet.deleteRow(row);
-  return { success: true };
+function updateRepasse(row, repasse) {
+  try {
+    const sheet = getSheet(SHEET_LANCAMENTOS);
+    sheet.getRange(parseInt(row), 9).setValue(Number(repasse));
+    SpreadsheetApp.flush();
+    return { success: true };
+  } catch(err) {
+    return { error: 'Erro ao salvar repasse: ' + err.toString() };
+  }
 }

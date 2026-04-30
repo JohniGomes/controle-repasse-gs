@@ -21,12 +21,12 @@
     <div class="logo">
       <img src="img/logo.png" alt="Centro Clínico Garcez Santos" class="header-logo">
     </div>
-    <nav class="header-nav">
-      <a href="lancamento.html" class="btn-header">
+    <nav class="header-nav" id="headerNav">
+      <a href="lancamento.html" class="btn-header nav-admin">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         Lançamento
       </a>
-      <a href="dashboard.html" class="btn-header">
+      <a href="dashboard.html" class="btn-header nav-admin">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Dashboard
       </a>
@@ -40,21 +40,16 @@
   <main class="page-body">
 
     <!-- Cards de resumo -->
-    <div class="summary-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.5rem">
+    <div class="summary-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.5rem">
       <div class="summary-card">
         <span class="label">Total de Itens</span>
         <span class="value" id="summaryTotal">—</span>
         <span class="sub">cadastrados no estoque</span>
       </div>
-      <div class="summary-card" style="border-left:4px solid var(--warning)">
-        <span class="label">Estoque Baixo</span>
-        <span class="value" id="summaryBaixo" style="color:var(--warning)">—</span>
-        <span class="sub">abaixo da quantidade mínima</span>
-      </div>
       <div class="summary-card" style="border-left:4px solid var(--danger)">
-        <span class="label">Estoque Crítico</span>
+        <span class="label">Estoque Zerado</span>
         <span class="value" id="summaryCritico" style="color:var(--danger)">—</span>
-        <span class="sub">quantidade zerada</span>
+        <span class="sub">itens com quantidade zero</span>
       </div>
     </div>
 
@@ -78,9 +73,8 @@
         </select>
         <select id="filtroStatus" class="form-select" style="max-width:180px" onchange="renderTabela()">
           <option value="">Todos os status</option>
-          <option value="ok">OK</option>
-          <option value="baixo">Estoque Baixo</option>
-          <option value="critico">Estoque Crítico</option>
+          <option value="ok">Com estoque</option>
+          <option value="critico">Zerado</option>
         </select>
       </div>
 
@@ -90,15 +84,14 @@
             <tr>
               <th>Item</th>
               <th>Categoria</th>
-              <th>Qtd Atual</th>
-              <th>Qtd Mínima</th>
+              <th>Quantidade</th>
               <th>Status</th>
               <th>Último Reabastecimento</th>
               <th style="width:96px">Ações</th>
             </tr>
           </thead>
           <tbody id="estoqueBody">
-            <tr><td colspan="7"><div class="empty-state"><p>Carregando...</p></div></td></tr>
+            <tr><td colspan="6"><div class="empty-state"><p>Carregando...</p></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -127,15 +120,9 @@
           </button>
         </div>
       </div>
-      <div class="form-row form-row-2">
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Quantidade Atual *</label>
-          <input type="number" id="itemQtdAtual" class="form-control" placeholder="0" min="0">
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Quantidade Mínima *</label>
-          <input type="number" id="itemQtdMin" class="form-control" placeholder="0" min="0">
-        </div>
+      <div class="form-group">
+        <label class="form-label">Quantidade Atual *</label>
+        <input type="number" id="itemQtdAtual" class="form-control" placeholder="0" min="0">
       </div>
 
       <div class="modal-actions">
@@ -198,6 +185,14 @@
 
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
-  <script src="js/estoque.js?v=1"></script>
+  <script src="js/estoque.js?v=2"></script>
+  <script>
+    // Oculta botões de navegação para usuário com role estoque
+    document.addEventListener('DOMContentLoaded', () => {
+      if (getUserRole() === 'estoque') {
+        document.querySelectorAll('.nav-admin').forEach(el => el.style.display = 'none');
+      }
+    });
+  </script>
 </body>
 </html>

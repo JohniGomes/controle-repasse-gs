@@ -163,6 +163,7 @@ function renderTable() {
       <td style="font-weight:600;color:var(--primary)">${l.dente || '—'}</td>
       <td><span class="badge badge-${isConvenio ? 'convenio' : 'particular'}">${l.tipo}</span></td>
       <td>${l.convenio || '—'}</td>
+      <td style="font-size:.8rem;color:var(--text-muted)">${l.gto || '—'}</td>
       <td>${formatCurrency(l.valor)}</td>
       <td>${repasseCell}</td>
       <td class="td-actions">
@@ -297,6 +298,7 @@ async function exportPDF() {
     l.dente || '—',
     l.tipo,
     l.convenio || '—',
+    l.gto || '—',
     formatCurrency(getRepasse(l))
   ]);
 
@@ -304,20 +306,21 @@ async function exportPDF() {
 
   doc.autoTable({
     startY: 52,
-    head: [['Data', 'Dentista', 'Paciente', 'Procedimento', 'Dente', 'Tipo', 'Convênio', 'Repasse']],
+    head: [['Data', 'Dentista', 'Paciente', 'Procedimento', 'Dente', 'Tipo', 'Convênio', 'GTO', 'Repasse']],
     body: rows,
     styles: { fontSize: 8, font: 'helvetica', cellPadding: 2.5 },
     headStyles: { fillColor: primaryRGB, textColor: 255, fontStyle: 'bold', halign: 'left' },
     alternateRowStyles: { fillColor: [242, 244, 246] },
     columnStyles: {
       0: { cellWidth: 20 },
-      1: { cellWidth: 36 },
-      2: { cellWidth: 36 },
-      3: { cellWidth: 58 },
+      1: { cellWidth: 32 },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 52 },
       4: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 30 },
-      7: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: primaryRGB }
+      5: { cellWidth: 18 },
+      6: { cellWidth: 26 },
+      7: { cellWidth: 22, halign: 'center' },
+      8: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: primaryRGB }
     },
     didParseCell: (data) => {
       // Linhas glosadas: texto vermelho, fundo rosado, itálico

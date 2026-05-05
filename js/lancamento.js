@@ -235,7 +235,8 @@ async function salvarLancamento(e) {
     convenio,
     valor:        parseFloat(document.getElementById('valor').value) || 0,
     repasse:      parseFloat(document.getElementById('repasse').value) || 0,
-    dente:        document.getElementById('dente').value || ''
+    dente:        document.getElementById('dente').value || '',
+    gto:          document.getElementById('gto').value.trim() || ''
   };
 
   if (!data.data || !data.dentista || !data.paciente || !data.procedimento || !data.valor) {
@@ -251,6 +252,7 @@ async function salvarLancamento(e) {
     if (res.error) { showToast(res.error, 'error'); return; }
     showToast('Lançamento salvo com sucesso!');
     document.getElementById('lancamentoForm').reset();
+    document.getElementById('gto').value = '';
     setDefaultDate();
     selectTipo('particular');
     calcularRepasse();

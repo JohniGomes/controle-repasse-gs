@@ -74,7 +74,7 @@ function renderTabela() {
 
   const tbody = document.getElementById('estoqueBody');
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhum item encontrado.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Nenhum item encontrado.</p></div></td></tr>';
     return;
   }
 
@@ -93,6 +93,7 @@ function renderTabela() {
     <tr>
       <td style="font-weight:600">${item.nome}</td>
       <td><span style="font-size:.8rem;color:var(--text-muted)">${item.categoria || '—'}</span></td>
+      <td><span style="font-size:.8rem;color:var(--text-muted)">${item.unidade || 'Unidade'}</span></td>
       <td style="font-weight:700;color:${st === 'critico' ? 'var(--danger)' : 'var(--success)'}">
         ${item.qtdAtual}
       </td>
@@ -140,6 +141,7 @@ function abrirEditar(rowIndex) {
   document.getElementById('modalItemTitulo').textContent = 'Editar Item';
   document.getElementById('editRowIndex').value  = rowIndex;
   document.getElementById('itemNome').value      = item.nome;
+  document.getElementById('itemUnidade').value   = item.unidade || 'Unidade';
   document.getElementById('itemQtdAtual').value  = item.qtdAtual;
   renderCategoriaSelects();
   document.getElementById('itemCategoria').value = item.categoria;
@@ -151,6 +153,7 @@ function limparModalItem() {
   document.getElementById('editRowIndex').value  = '';
   document.getElementById('itemNome').value      = '';
   document.getElementById('itemCategoria').value = '';
+  document.getElementById('itemUnidade').value   = 'Unidade';
   document.getElementById('itemQtdAtual').value  = '';
 }
 
@@ -161,6 +164,7 @@ document.getElementById('modalAddItem')
 async function salvarItem() {
   const nome     = document.getElementById('itemNome').value.trim();
   const categoria= document.getElementById('itemCategoria').value;
+  const unidade  = document.getElementById('itemUnidade').value;
   const qtdAtual = document.getElementById('itemQtdAtual').value;
   const rowIndex = document.getElementById('editRowIndex').value;
 
@@ -174,7 +178,7 @@ async function salvarItem() {
   try {
     const params = {
       action: rowIndex ? 'updateItemEstoque' : 'addItemEstoque',
-      nome, categoria,
+      nome, categoria, unidade,
       qtdAtual: Number(qtdAtual),
       qtdMin:   0
     };

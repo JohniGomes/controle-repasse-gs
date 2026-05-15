@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(powershell -Command \"\\(Get-Content 'D:\\\\1 - Projetos\\\\Andressa\\\\dashboard.html'\\) -replace 'dashboard.js\\\\?v=15', 'dashboard.js?v=16' | Set-Content 'D:\\\\1 - Projetos\\\\Andressa\\\\dashboard.html'\")"
-    ]
-  }
-}

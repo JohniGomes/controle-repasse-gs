@@ -468,9 +468,9 @@ function editarMeta(id) {
   document.getElementById('metaIndicacoes').value   = m.indicacoes || '';
   document.getElementById('metaValorRS').value      = m.metaValorRS || '';
   document.getElementById('btnSalvarMeta').dataset.editId = id;
-  // Scroll suave até o formulário
-  document.getElementById('metaMes').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  showToast('Editando meta — clique em Salvar Meta para confirmar', 'warning');
+  // Scroll suave até o card de metas
+  document.getElementById('metasCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast('Meta carregada para edição ✓', 'warning');
 }
 
 async function salvarMeta() {

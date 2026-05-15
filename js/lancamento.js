@@ -460,17 +460,46 @@ function populateMetaDentistas() {
 function editarMeta(id) {
   const m = metasData.find(x => x.id === id);
   if (!m) return;
-  // Garante select populado antes de setar valor
-  populateMetaDentistas();
-  document.getElementById('metaMes').value          = m.mes;
-  document.getElementById('metaDentista').value     = m.dentista;
-  document.getElementById('metaValor').value        = m.meta || '';
-  document.getElementById('metaIndicacoes').value   = m.indicacoes || '';
-  document.getElementById('metaValorRS').value      = m.metaValorRS || '';
-  document.getElementById('btnSalvarMeta').dataset.editId = id;
-  // Scroll suave até o card de metas
-  document.getElementById('metasCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  showToast('Meta carregada para edição ✓', 'warning');
+
+  // Popula select de dentistas no modal
+  const sel = document.getElementById('editMetaDentista');
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  dentistas.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.nome; o.textContent = d.nome;
+    sel.appendChild(o);
+  });
+
+  document.getElementById('editMetaId').value         = id;
+  document.getElementById('editMetaMes').value        = m.mes;
+  document.getElementById('editMetaDentista').value   = m.dentista;
+  document.getElementById('editMetaValor').value      = m.meta || '';
+  document.getElementById('editMetaIndicacoes').value = m.indicacoes || '';
+  document.getElementById('editMetaValorRS').value    = m.metaValorRS || '';
+
+  openModal('modalEditMeta');
+}
+
+async function confirmarEditMeta() {
+  const mes        = document.getElementById('editMetaMes').value;
+  const dentista   = document.getElementById('editMetaDentista').value;
+  const meta       = document.getElementById('editMetaValor').value;
+  const indicacoes = document.getElementById('editMetaIndicacoes').value;
+  const metaValorRS= document.getElementById('editMetaValorRS').value;
+
+  if (!mes || !dentista) { showToast('Selecione o mês e o dentista', 'warning'); return; }
+
+  const btn = document.querySelector('#modalEditMeta .btn-primary');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const res = await apiCall({ action: 'saveMeta', mes, dentista, meta, indicacoes, metaValorRS });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    showToast('Meta atualizada!');
+    closeModal('modalEditMeta');
+    await loadMetas();
+  } catch { showToast('Erro ao salvar', 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Salvar'; }
 }
 
 async function salvarMeta() {

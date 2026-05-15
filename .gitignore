@@ -1,0 +1,13 @@
+# Arquivos desnecessários para o deploy
+*.xlsx
+*.pdf
+*.jpeg
+*.jpg
+*.png
+!img/
+meu-amor.py
+Controle Repasse/
+.claude/
+base de dados*
+LOGO*
+WhatsApp*

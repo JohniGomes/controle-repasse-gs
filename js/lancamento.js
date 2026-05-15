@@ -416,7 +416,7 @@ async function loadMetas() {
 function renderMetasTabela() {
   const tbody = document.getElementById('metasBody');
   if (!metasData.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Nenhuma meta registrada.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhuma meta registrada.</p></div></td></tr>';
     return;
   }
   const sorted = [...metasData].sort((a, b) => b.mes.localeCompare(a.mes) || a.dentista.localeCompare(b.dentista));
@@ -426,6 +426,7 @@ function renderMetasTabela() {
       <td>${m.dentista}</td>
       <td>${m.meta || '—'}</td>
       <td>${m.indicacoes || '—'}</td>
+      <td>${m.metaValorRS ? formatCurrency(m.metaValorRS) : '—'}</td>
       <td class="td-actions">
         <button class="btn-action" onclick="editarMeta('${m.id}')" title="Editar" style="color:var(--accent)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -459,20 +460,25 @@ function populateMetaDentistas() {
 function editarMeta(id) {
   const m = metasData.find(x => x.id === id);
   if (!m) return;
-  document.getElementById('metaMes').value        = m.mes;
-  document.getElementById('metaDentista').value   = m.dentista;
-  document.getElementById('metaValor').value      = m.meta;
-  document.getElementById('metaIndicacoes').value = m.indicacoes;
+  // Garante select populado antes de setar valor
+  populateMetaDentistas();
+  document.getElementById('metaMes').value          = m.mes;
+  document.getElementById('metaDentista').value     = m.dentista;
+  document.getElementById('metaValor').value        = m.meta || '';
+  document.getElementById('metaIndicacoes').value   = m.indicacoes || '';
+  document.getElementById('metaValorRS').value      = m.metaValorRS || '';
   document.getElementById('btnSalvarMeta').dataset.editId = id;
-  window.scrollTo({ top: document.getElementById('metaMes').getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
+  // Scroll suave até o formulário
+  document.getElementById('metaMes').scrollIntoView({ behavior: 'smooth', block: 'center' });
   showToast('Editando meta — clique em Salvar Meta para confirmar', 'warning');
 }
 
 async function salvarMeta() {
-  const mes       = document.getElementById('metaMes').value;
-  const dentista  = document.getElementById('metaDentista').value;
-  const meta      = document.getElementById('metaValor').value.trim();
-  const indicacoes= document.getElementById('metaIndicacoes').value.trim();
+  const mes        = document.getElementById('metaMes').value;
+  const dentista   = document.getElementById('metaDentista').value;
+  const meta       = document.getElementById('metaValor').value;
+  const indicacoes = document.getElementById('metaIndicacoes').value;
+  const metaValorRS= document.getElementById('metaValorRS').value;
 
   if (!mes || !dentista) { showToast('Selecione o mês e o dentista', 'warning'); return; }
 
@@ -480,11 +486,12 @@ async function salvarMeta() {
   btn.disabled = true; btn.textContent = 'Salvando...';
 
   try {
-    const res = await apiCall({ action: 'saveMeta', mes, dentista, meta, indicacoes });
+    const res = await apiCall({ action: 'saveMeta', mes, dentista, meta, indicacoes, metaValorRS });
     if (res.error) { showToast(res.error, 'error'); return; }
     showToast(res.updated ? 'Meta atualizada!' : 'Meta registrada!');
     document.getElementById('metaValor').value      = '';
     document.getElementById('metaIndicacoes').value = '';
+    document.getElementById('metaValorRS').value    = '';
     delete btn.dataset.editId;
     await loadMetas();
     populateMetaDentistas();

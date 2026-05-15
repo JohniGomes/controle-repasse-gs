@@ -200,6 +200,11 @@ function renderSummary() {
           <span style="color:var(--text-muted)">Indicações meta:</span>
           <span style="font-weight:700;color:var(--primary)">${indNum}</span>
         </div>` : ''}
+        ${m.metaValorRS ? `
+        <div style="${rowStyle};margin-top:.3rem">
+          <span style="color:var(--text-muted)">Meta valor:</span>
+          <span style="font-weight:700;color:var(--primary)">${formatCurrency(m.metaValorRS)}</span>
+        </div>` : ''}
       </div>`;
   }).join('');
 }

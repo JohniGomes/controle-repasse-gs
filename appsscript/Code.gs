@@ -31,7 +31,7 @@ function doGet(e) {
       case 'deleteLancamento':  result = deleteLancamento(e.parameter.row);                     break;
       case 'updateRepasse':     result = updateRepasse(e.parameter.row, e.parameter.repasse);   break;
       case 'getMetas':          result = getMetas();                                                                               break;
-      case 'saveMeta':          result = saveMeta(e.parameter.mes, e.parameter.dentista, e.parameter.meta, e.parameter.indicacoes); break;
+      case 'saveMeta':          result = saveMeta(e.parameter.mes, e.parameter.dentista, e.parameter.meta, e.parameter.indicacoes, e.parameter.metaValorRS); break;
       case 'deleteMeta':        result = deleteMeta(e.parameter.id);                                                               break;
       case 'getEstoque':        result = getEstoque();                                                                              break;
       case 'addItemEstoque':    result = addItemEstoque(e.parameter.nome, e.parameter.categoria, e.parameter.qtdAtual, e.parameter.qtdMin, e.parameter.unidade); break;
@@ -66,7 +66,7 @@ function getSheet(name) {
     else if (name === SHEET_ESTOQUE)
       sheet.appendRow(['ID','Nome','Categoria','QtdAtual','QtdMin','UltimoReabastecimento','Unidade']);
     else if (name === SHEET_METAS)
-      sheet.appendRow(['ID','Mes','Dentista','Meta','Indicacoes','Timestamp']);
+      sheet.appendRow(['ID','Mes','Dentista','Meta','Indicacoes','Timestamp','MetaValorRS']);
   }
   return sheet;
 }
@@ -275,34 +275,34 @@ function getMetas() {
   for (var i = 1; i < data.length; i++) {
     var d = data[i];
     list.push({
-      id:        String(d[0]),
-      mes:       String(d[1] || ''),
-      dentista:  String(d[2] || ''),
-      meta:      String(d[3] || ''),
-      indicacoes:String(d[4] || ''),
-      timestamp: String(d[5] || '')
+      id:          String(d[0]),
+      mes:         String(d[1] || ''),
+      dentista:    String(d[2] || ''),
+      meta:        String(d[3] || ''),
+      indicacoes:  String(d[4] || ''),
+      timestamp:   String(d[5] || ''),
+      metaValorRS: String(d[6] || '')
     });
   }
   return { success: true, data: list };
 }
 
-function saveMeta(mes, dentista, meta, indicacoes) {
+function saveMeta(mes, dentista, meta, indicacoes, metaValorRS) {
   if (!mes || !dentista) return { error: 'Mês e dentista são obrigatórios' };
   var sheet = getSheet(SHEET_METAS);
   var data  = sheet.getDataRange().getValues();
-  // Verifica se já existe registro para esse mês+dentista → atualiza
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][1]) === String(mes) && String(data[i][2]) === String(dentista)) {
       sheet.getRange(i + 1, 4).setValue(meta || '');
       sheet.getRange(i + 1, 5).setValue(indicacoes || '');
       sheet.getRange(i + 1, 6).setValue(new Date().toISOString());
+      sheet.getRange(i + 1, 7).setValue(metaValorRS || '');
       SpreadsheetApp.flush();
       return { success: true, id: String(data[i][0]), updated: true };
     }
   }
-  // Novo registro
   var id = uid();
-  sheet.appendRow([id, mes, dentista, meta || '', indicacoes || '', new Date().toISOString()]);
+  sheet.appendRow([id, mes, dentista, meta || '', indicacoes || '', new Date().toISOString(), metaValorRS || '']);
   return { success: true, id: id, updated: false };
 }
 

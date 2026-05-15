@@ -268,6 +268,15 @@ function updateRepasse(row, repasse) {
 
 // ── Metas Mensais ─────────────────────────────────────────────
 
+function fmtMonth(v) {
+  if (v && typeof v.getFullYear === 'function') {
+    return Utilities.formatDate(v, 'America/Sao_Paulo', 'yyyy-MM');
+  }
+  var s = String(v).trim();
+  if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 7);
+  return s;
+}
+
 function getMetas() {
   var sheet = getSheet(SHEET_METAS);
   var data  = sheet.getDataRange().getValues();
@@ -276,7 +285,7 @@ function getMetas() {
     var d = data[i];
     list.push({
       id:          String(d[0]),
-      mes:         String(d[1] || ''),
+      mes:         fmtMonth(d[1]),
       dentista:    String(d[2] || ''),
       meta:        String(d[3] || ''),
       indicacoes:  String(d[4] || ''),

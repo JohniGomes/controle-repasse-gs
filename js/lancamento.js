@@ -177,22 +177,24 @@ async function deleteConvenioSelected() {
 function selectTipo(tipo) {
   document.getElementById('tipoParticular').classList.toggle('selected-particular', tipo === 'particular');
   document.getElementById('tipoConvenio').classList.toggle('selected-convenio', tipo === 'convenio');
+  document.getElementById('tipoRascunho').classList.toggle('selected-rascunho', tipo === 'rascunho');
   document.getElementById('radioParticular').checked = tipo === 'particular';
   document.getElementById('radioConvenio').checked   = tipo === 'convenio';
+  document.getElementById('radioRascunho').checked   = tipo === 'rascunho';
   document.getElementById('convenioRow').style.display = tipo === 'convenio' ? '' : 'none';
   calcularRepasse();
 }
 
 // ── Cálculo de Repasse ────────────────────────────────────────
 function calcularRepasse() {
-  const tipo   = document.getElementById('radioParticular').checked ? 'particular' : 'convenio';
+  const tipo   = document.getElementById('radioParticular').checked ? 'particular' : document.getElementById('radioConvenio').checked ? 'convenio' : 'rascunho';
   const valor  = parseFloat(document.getElementById('valor').value) || 0;
   const sel    = document.getElementById('procedimento');
   const opt    = sel.options[sel.selectedIndex];
   let repasse  = 0;
   let manual   = false;
 
-  if (tipo === 'particular' && opt && opt.dataset.repasse) {
+  if ((tipo === 'particular' || tipo === 'rascunho') && opt && opt.dataset.repasse) {
     repasse = parseFloat(opt.dataset.repasse) || 0;
     if (!repasse) manual = true;   // procedimento customizado sem repasse fixo
   } else if (tipo === 'convenio' && valor > 0) {
@@ -220,7 +222,7 @@ function updateRepasseManual() {
 async function salvarLancamento(e) {
   e.preventDefault();
 
-  const tipo    = document.getElementById('radioParticular').checked ? 'Particular' : 'Convênio';
+  const tipo    = document.getElementById('radioParticular').checked ? 'Particular' : document.getElementById('radioConvenio').checked ? 'Convênio' : 'Rascunho';
   const convenio = tipo === 'Convênio' ? document.getElementById('convenio').value : '';
 
   if (tipo === 'Convênio' && !convenio) {

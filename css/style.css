@@ -220,6 +220,11 @@ body {
   background: #e6fafa;
   color: var(--accent);
 }
+.tipo-option.selected-rascunho {
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #16a34a;
+}
 
 /* Grid responsivo */
 .form-row { display: grid; gap: 1rem; }
@@ -336,11 +341,14 @@ tbody tr:last-child { border-bottom: none; }
 }
 .badge-particular { background: var(--primary-light); color: var(--primary); }
 .badge-convenio   { background: #e6fafa;               color: var(--accent);  }
+.badge-rascunho   { background: #dcfce7;               color: #16a34a;        }
 .badge-glosado    { background: #fee2e2;               color: var(--danger);  }
 
 /* Linha glosada */
 tr.row-glosado td { opacity: .45; text-decoration: line-through; }
 tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
+tr.row-rascunho td { background: #f0fdf4; }
+tr.row-rascunho:hover td { background: #dcfce7; }
 
 /* Botões de ação na tabela */
 .td-actions { white-space: nowrap; text-align: center; }

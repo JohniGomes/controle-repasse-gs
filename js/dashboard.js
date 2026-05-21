@@ -109,8 +109,8 @@ function applyFilters() {
         const cm = rm <= 2 ? rm + 10 : rm - 2;
         const cy = rm <= 2 ? ry - 1  : ry;
         const convPrefix = `${cy}-${String(cm).padStart(2,'0')}`;
-        if (l.tipo === 'Particular' && !d.startsWith(partPrefix)) return false;
-        if (l.tipo === 'Convênio'   && !d.startsWith(convPrefix)) return false;
+        if ((l.tipo === 'Particular' || l.tipo === 'Rascunho') && !d.startsWith(partPrefix)) return false;
+        if (l.tipo === 'Convênio' && !d.startsWith(convPrefix)) return false;
       }
     } else {
       const from = document.getElementById('filterFrom').value;
@@ -227,6 +227,7 @@ function renderTable() {
   tbody.innerHTML = sorted.map(l => {
     const isConvenio   = l.tipo === 'Convênio';
     const isParticular = l.tipo === 'Particular';
+    const isRascunho   = l.tipo === 'Rascunho';
 
     let repasseCell;
     if (l.glosado) {
@@ -263,13 +264,13 @@ function renderTable() {
       : '';
 
     return `
-    <tr class="${l.glosado ? 'row-glosado' : ''}">
+    <tr class="${l.glosado ? 'row-glosado' : isRascunho ? 'row-rascunho' : ''}">
       <td style="white-space:nowrap">${formatDate(l.data)}</td>
       <td>${l.dentista}</td>
       <td>${l.paciente}</td>
       <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.procedimento}">${l.procedimento}</td>
       <td style="font-weight:600;color:var(--primary)">${l.dente || '—'}</td>
-      <td><span class="badge badge-${isConvenio ? 'convenio' : 'particular'}">${l.tipo}</span></td>
+      <td><span class="badge badge-${isConvenio ? 'convenio' : isRascunho ? 'rascunho' : 'particular'}">${l.tipo}</span></td>
       <td>${l.convenio || '—'}</td>
       <td style="font-size:.8rem;color:var(--text-muted)">${l.gto || '—'}</td>
       <td>${formatCurrency(l.valor)}</td>

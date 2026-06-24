@@ -28,8 +28,9 @@ function doGet(e) {
       case 'debugDatas':        result = debugDatas();                                         break;
       case 'updateGlosa':       result = updateGlosa(e.parameter.row, e.parameter.glosado);     break;
       case 'updatePendente':    result = updatePendente(e.parameter.row, e.parameter.pendente); break;
-      case 'deleteLancamento':  result = deleteLancamento(e.parameter.row);                     break;
-      case 'updateRepasse':     result = updateRepasse(e.parameter.row, e.parameter.repasse);   break;
+      case 'deleteLancamento':    result = deleteLancamento(e.parameter.row);                                           break;
+      case 'updateLancamento':   result = updateLancamento(e.parameter.row, JSON.parse(e.parameter.data));           break;
+      case 'updateRepasse':      result = updateRepasse(e.parameter.row, e.parameter.repasse);                       break;
       case 'getMetas':          result = getMetas();                                                                               break;
       case 'saveMeta':          result = saveMeta(e.parameter.mes, e.parameter.dentista, e.parameter.meta, e.parameter.indicacoes, e.parameter.metaValorRS); break;
       case 'deleteMeta':        result = deleteMeta(e.parameter.id);                                                               break;
@@ -241,6 +242,27 @@ function deleteLancamento(row) {
     return { success: true };
   } catch(err) {
     return { error: 'Erro ao excluir: ' + err.toString() };
+  }
+}
+
+function updateLancamento(row, l) {
+  try {
+    const sheet = getSheet(SHEET_LANCAMENTOS);
+    const r = parseInt(row);
+    sheet.getRange(r, 2).setValue(l.data);
+    sheet.getRange(r, 3).setValue(l.dentista);
+    sheet.getRange(r, 4).setValue(l.paciente);
+    sheet.getRange(r, 5).setValue(l.procedimento);
+    sheet.getRange(r, 6).setValue(l.tipo);
+    sheet.getRange(r, 7).setValue(l.convenio || '');
+    sheet.getRange(r, 8).setValue(Number(l.valor));
+    sheet.getRange(r, 9).setValue(Number(l.repasse));
+    sheet.getRange(r, 12).setValue(l.dente || '');
+    sheet.getRange(r, 13).setValue(l.gto || '');
+    SpreadsheetApp.flush();
+    return { success: true };
+  } catch(err) {
+    return { error: 'Erro ao atualizar lançamento: ' + err.toString() };
   }
 }
 

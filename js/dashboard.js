@@ -86,10 +86,17 @@ function applyFilters() {
   const activePeriod = document.querySelector('.period-tab.active')?.dataset.type || 'month';
   const m            = document.getElementById('filterMonth').value;
 
+  const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
   filteredLancamentos = allLancamentos.filter(l => {
     if (dentista     && l.dentista.trim()     !== dentista.trim())     return false;
     if (procedimento && l.procedimento.trim() !== procedimento.trim()) return false;
     if (convenio     && l.tipo.trim()         !== convenio.trim())     return false;
+    if (search) {
+      const hay = [l.dentista, l.paciente, l.procedimento, l.convenio, l.tipo, l.dente, l.gto, String(l.valor)]
+        .join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
 
     const d = String(l.data).slice(0, 10);
     if (activePeriod === 'month') {
@@ -278,6 +285,9 @@ function renderTable() {
       <td class="td-actions">
         ${btnGlosa}
         ${btnPendente}
+        <button class="btn-action" onclick="openEditModal(${l._uid})" title="Editar lançamento" style="color:var(--primary)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
         <button class="btn-action btn-del" onclick="deleteRow(${l._uid})" title="Excluir lançamento">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -855,4 +865,69 @@ function renderChartProcedimento() {
       }
     }
   });
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Editar lançamento ─────────────────────────────────────────
+function toggleEditConvenio() {
+  const tipo = document.getElementById('editLancTipo').value;
+  document.getElementById('editConvenioWrap').style.display = tipo === 'Convênio' ? '' : 'none';
+}
+
+function openEditModal(uid) {
+  const l = allLancamentos.find(x => x._uid === uid);
+  if (!l) return;
+  document.getElementById('editLancUid').value         = uid;
+  document.getElementById('editLancRow').value         = l.row;
+  document.getElementById('editLancData').value        = l.data ? l.data.slice(0,10) : '';
+  document.getElementById('editLancDentista').value    = l.dentista || '';
+  document.getElementById('editLancPaciente').value    = l.paciente || '';
+  document.getElementById('editLancProcedimento').value= l.procedimento || '';
+  document.getElementById('editLancTipo').value        = l.tipo || 'Particular';
+  document.getElementById('editLancConvenio').value    = l.convenio || '';
+  document.getElementById('editLancValor').value       = l.valor || '';
+  document.getElementById('editLancRepasse').value     = l.repasse || '';
+  document.getElementById('editLancDente').value       = l.dente || '';
+  document.getElementById('editLancGto').value         = l.gto || '';
+  toggleEditConvenio();
+  openModal('modalEditLancamento');
+}
+
+async function saveEditLancamento() {
+  const uid  = parseInt(document.getElementById('editLancUid').value);
+  const row  = document.getElementById('editLancRow').value;
+  if (!row) { showToast('Linha inválida — recarregue a página', 'error'); return; }
+
+  const data = {
+    data:         document.getElementById('editLancData').value,
+    dentista:     document.getElementById('editLancDentista').value.trim(),
+    paciente:     document.getElementById('editLancPaciente').value.trim(),
+    procedimento: document.getElementById('editLancProcedimento').value.trim(),
+    tipo:         document.getElementById('editLancTipo').value,
+    convenio:     document.getElementById('editLancConvenio').value.trim(),
+    valor:        parseFloat(document.getElementById('editLancValor').value) || 0,
+    repasse:      parseFloat(document.getElementById('editLancRepasse').value) || 0,
+    dente:        document.getElementById('editLancDente').value.trim(),
+    gto:          document.getElementById('editLancGto').value.trim()
+  };
+
+  if (!data.data || !data.dentista || !data.paciente) {
+    showToast('Preencha data, dentista e paciente', 'warning'); return;
+  }
+
+  try {
+    const res = await apiCall({ action: 'updateLancamento', row, data: JSON.stringify(data) });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    // Atualiza in-memory
+    const item = allLancamentos.find(x => x._uid === uid);
+    if (item) Object.assign(item, data);
+    closeModal('modalEditLancamento');
+    applyFilters();
+    showToast('Lançamento atualizado!');
+  } catch(e) {
+    showToast('Erro de conexão: ' + (e.message || e), 'error');
+  }
 }

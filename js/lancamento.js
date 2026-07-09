@@ -5,6 +5,7 @@
 let dentistas = [];
 let convenios = [];
 let procedimentosCustom = [];
+let lancamentosExistentes = [];
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -12,6 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setDefaultDate();
   showLoader(true);
   await Promise.all([loadDentistas(), loadConvenios(), loadProcedimentos()]);
+  // Carrega lançamentos em background para checagem de duplicatas
+  apiCall({ action: 'getLancamentos' }).then(res => {
+    lancamentosExistentes = res.data || [];
+  }).catch(() => {});
   showLoader(false);
 });
 
@@ -246,6 +251,25 @@ async function salvarLancamento(e) {
     showToast('Preencha todos os campos obrigatórios', 'warning'); return;
   }
 
+  // Checagem de duplicata
+  const dup = lancamentosExistentes.find(l =>
+    l.data        === data.data &&
+    l.dentista    === data.dentista &&
+    l.paciente.trim().toLowerCase()    === data.paciente.toLowerCase() &&
+    l.procedimento === data.procedimento
+  );
+  if (dup) {
+    const ok = confirm(
+      `⚠️ Lançamento similar já existe:\n\n` +
+      `📅 ${dup.data.slice(8,10)}/${dup.data.slice(5,7)}/${dup.data.slice(0,4)}\n` +
+      `👨‍⚕️ ${dup.dentista}\n` +
+      `🧑 ${dup.paciente}\n` +
+      `🦷 ${dup.procedimento}\n\n` +
+      `Deseja salvar mesmo assim?`
+    );
+    if (!ok) return;
+  }
+
   const btn = document.getElementById('btnSalvar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Salvando...';
@@ -253,6 +277,7 @@ async function salvarLancamento(e) {
   try {
     const res = await apiCall({ action: 'addLancamento', data: JSON.stringify(data) });
     if (res.error) { showToast(res.error, 'error'); return; }
+    lancamentosExistentes.push({ ...data });
     showToast('Lançamento salvo com sucesso!');
     document.getElementById('lancamentoForm').reset();
     document.getElementById('gto').value = '';

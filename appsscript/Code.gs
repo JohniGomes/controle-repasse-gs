@@ -28,8 +28,9 @@ function doGet(e) {
       case 'debugDatas':        result = debugDatas();                                         break;
       case 'updateGlosa':       result = updateGlosa(e.parameter.row, e.parameter.glosado);     break;
       case 'updatePendente':    result = updatePendente(e.parameter.row, e.parameter.pendente); break;
-      case 'deleteLancamento':    result = deleteLancamento(e.parameter.row);                                           break;
-      case 'updateLancamento':   result = updateLancamento(e.parameter.row, JSON.parse(e.parameter.data));           break;
+      case 'deleteLancamento':    result = deleteLancamento(e.parameter.row);                                                                                  break;
+      case 'updateLancamento':   result = updateLancamento(e.parameter.row, JSON.parse(e.parameter.data));                                           break;
+      case 'updateEstorno':      result = updateEstorno(e.parameter.row, e.parameter.estornado, e.parameter.dataEstorno);                            break;
       case 'updateRepasse':      result = updateRepasse(e.parameter.row, e.parameter.repasse);                       break;
       case 'getMetas':          result = getMetas();                                                                               break;
       case 'saveMeta':          result = saveMeta(e.parameter.mes, e.parameter.dentista, e.parameter.meta, e.parameter.indicacoes, e.parameter.metaValorRS); break;
@@ -192,7 +193,7 @@ function addLancamento(l) {
   getSheet(SHEET_LANCAMENTOS).appendRow([
     id, l.data, l.dentista, l.paciente, l.procedimento,
     l.tipo, l.convenio || '', Number(l.valor), Number(l.repasse),
-    new Date().toISOString(), false, l.dente || '', l.gto || '', false
+    new Date().toISOString(), false, l.dente || '', l.gto || '', false, false, ''
   ]);
   return { success: true, id };
 }
@@ -217,7 +218,9 @@ function getLancamentos() {
       glosado:      d[10] === true || String(d[10]).toUpperCase() === 'TRUE',
       dente:        String(d[11] || ''),
       gto:          String(d[12] || ''),
-      pendente:     d[13] === true || String(d[13]).toUpperCase() === 'TRUE'
+      pendente:     d[13] === true || String(d[13]).toUpperCase() === 'TRUE',
+      estornado:    d[14] === true || String(d[14]).toUpperCase() === 'TRUE',
+      dataEstorno:  d[15] ? fmtDate(d[15]) : ''
     });
   }
   return { success: true, data: list };
@@ -233,6 +236,19 @@ function updateGlosa(row, glosado) {
     return { success: true };
   } catch(err) {
     return { error: 'Erro ao atualizar glosa: ' + err.toString() };
+  }
+}
+
+function updateEstorno(row, estornado, dataEstorno) {
+  try {
+    const sheet = getSheet(SHEET_LANCAMENTOS);
+    const r = parseInt(row);
+    sheet.getRange(r, 15).setValue(estornado === 'true' || estornado === true);
+    sheet.getRange(r, 16).setValue(estornado === 'true' || estornado === true ? (dataEstorno || '') : '');
+    SpreadsheetApp.flush();
+    return { success: true };
+  } catch(err) {
+    return { error: 'Erro ao registrar estorno: ' + err.toString() };
   }
 }
 

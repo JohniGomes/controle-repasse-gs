@@ -145,16 +145,19 @@ function clearFilters() {
 
 // ── Summary cards ─────────────────────────────────────────────
 function renderSummary() {
-  const ativos    = filteredLancamentos.filter(l => !l.glosado && !l.pendente);
-  const glosados  = filteredLancamentos.filter(l =>  l.glosado);
-  const pendentes = filteredLancamentos.filter(l => !l.glosado && l.pendente);
-  const totalVal  = ativos.reduce((s, l) => s + (Number(l.valor) || 0), 0);
-  const totalRep  = ativos.reduce((s, l) => s + getRepasse(l), 0);
-  const totalGlosa = glosados.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
+  const glosadosAtivos = filteredLancamentos.filter(l =>  l.glosado && !l.estornado);
+  const estornados     = filteredLancamentos.filter(l =>  l.estornado);
+  const pendentes      = filteredLancamentos.filter(l => !l.glosado && l.pendente);
+  // ativos = não glosados + estornados (estornado recebe repasse)
+  const ativos = filteredLancamentos.filter(l => (!l.glosado || l.estornado) && !l.pendente);
+  const totalVal   = ativos.reduce((s, l) => s + (Number(l.valor) || 0), 0);
+  const totalRep   = ativos.reduce((s, l) => s + getRepasse(l), 0);
+  const totalGlosa = glosadosAtivos.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
 
   let sub = [];
-  if (glosados.length)  sub.push(`${glosados.length} glosado${glosados.length  > 1 ? 's' : ''}`);
-  if (pendentes.length) sub.push(`${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}`);
+  if (glosadosAtivos.length) sub.push(`${glosadosAtivos.length} glosado${glosadosAtivos.length > 1 ? 's' : ''}`);
+  if (estornados.length)     sub.push(`${estornados.length} estorno${estornados.length > 1 ? 's' : ''}`);
+  if (pendentes.length)      sub.push(`${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}`);
 
   document.getElementById('summaryQtd').textContent =
     filteredLancamentos.length + (sub.length ? ` (${sub.join(', ')})` : '');
@@ -162,7 +165,9 @@ function renderSummary() {
   document.getElementById('summaryRepasse').textContent = formatCurrency(totalRep);
   document.getElementById('summaryGlosa').textContent   = formatCurrency(totalGlosa);
   document.getElementById('summaryGlosaSub').textContent =
-    glosados.length ? `${glosados.length} lançamento${glosados.length > 1 ? 's' : ''} glosado${glosados.length > 1 ? 's' : ''}` : 'nenhum glosado';
+    glosadosAtivos.length
+      ? `${glosadosAtivos.length} glosado${glosadosAtivos.length > 1 ? 's' : ''}${estornados.length ? ` · ${estornados.length} estornado${estornados.length > 1 ? 's' : ''}` : ''}`
+      : estornados.length ? `${estornados.length} estorno${estornados.length > 1 ? 's' : ''} de glosa` : 'nenhum glosado';
 
   // Metas do período filtrado
   const metaInfo   = document.getElementById('summaryMetaInfo');
@@ -237,7 +242,10 @@ function renderTable() {
     const isRascunho   = l.tipo === 'Rascunho';
 
     let repasseCell;
-    if (l.glosado) {
+    if (l.estornado) {
+      const de = l.dataEstorno ? ` · ${formatDate(l.dataEstorno)}` : '';
+      repasseCell = `<span style="white-space:nowrap"><span style="color:#7c3aed;font-weight:700">${formatCurrency(getRepasse(l))}</span> <span style="display:inline-block;padding:.18rem .5rem;border-radius:20px;font-size:.68rem;font-weight:700;background:#ede9fe;color:#7c3aed;white-space:nowrap">↩ ESTORNO${de}</span></span>`;
+    } else if (l.glosado) {
       repasseCell = `<span style="white-space:nowrap"><span style="color:var(--danger);font-weight:700;text-decoration:line-through">${formatCurrency(l.repasse)}</span> <span class="badge badge-glosado" style="white-space:nowrap">GLOSADO</span></span>`;
     } else if (l.pendente) {
       repasseCell = `<span style="white-space:nowrap"><span style="color:#b45309;font-weight:700">${formatCurrency(getRepasse(l))}</span> <span style="display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.7rem;font-weight:700;background:#fef3c7;color:#b45309;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">⏸ PENDENTE</span></span>`;
@@ -248,16 +256,33 @@ function renderTable() {
               ondblclick="editRepasse(this)">${formatCurrency(getRepasse(l))}</span>`;
     }
 
-    const btnGlosa = isConvenio
-      ? `<button class="btn-action ${l.glosado ? 'btn-unglose' : 'btn-glose'}"
-           onclick="toggleGlosa(${l._uid})"
-           title="${l.glosado ? 'Remover glosa' : 'Marcar como glosado'}">
-           ${l.glosado
-             ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
-             : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`
-           }
-         </button>`
-      : '';
+    let btnGlosa = '';
+    if (isConvenio) {
+      if (l.estornado) {
+        // Desfazer estorno
+        btnGlosa = `<button class="btn-action" onclick="toggleEstorno(${l._uid}, false)"
+           title="Desfazer estorno" style="color:#7c3aed">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+         </button>`;
+      } else if (l.glosado) {
+        // Estornar glosa + Desfazer glosa
+        btnGlosa = `
+         <button class="btn-action" onclick="toggleEstorno(${l._uid}, true)"
+           title="Registrar estorno de glosa" style="color:#7c3aed">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+         </button>
+         <button class="btn-action btn-unglose" onclick="toggleGlosa(${l._uid})"
+           title="Desfazer glosa (erro)">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+         </button>`;
+      } else {
+        // Marcar como glosado
+        btnGlosa = `<button class="btn-action btn-glose" onclick="toggleGlosa(${l._uid})"
+           title="Marcar como glosado">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+         </button>`;
+      }
+    }
 
     const btnPendente = isParticular
       ? `<button class="btn-action" onclick="togglePendente(${l._uid})"
@@ -271,7 +296,7 @@ function renderTable() {
       : '';
 
     return `
-    <tr class="${l.glosado ? 'row-glosado' : isRascunho ? 'row-rascunho' : ''}">
+    <tr class="${l.estornado ? 'row-estornado' : l.glosado ? 'row-glosado' : isRascunho ? 'row-rascunho' : ''}">
       <td style="white-space:nowrap">${formatDate(l.data)}</td>
       <td>${l.dentista}</td>
       <td>${l.paciente}</td>
@@ -927,6 +952,35 @@ async function saveEditLancamento() {
     closeModal('modalEditLancamento');
     applyFilters();
     showToast('Lançamento atualizado!');
+  } catch(e) {
+    showToast('Erro de conexão: ' + (e.message || e), 'error');
+  }
+}
+
+// ── Estorno de Glosa ──────────────────────────────────────────
+async function toggleEstorno(uid, ativar) {
+  const item = allLancamentos.find(l => l._uid === uid);
+  if (!item) return;
+  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
+
+  let dataEstorno = '';
+  if (ativar) {
+    // Pede a data do estorno — padrão hoje
+    const hoje = new Date();
+    const pad  = n => String(n).padStart(2, '0');
+    const hojeFmt = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
+    const input = prompt('Data do estorno (AAAA-MM-DD):', hojeFmt);
+    if (input === null) return; // cancelado
+    dataEstorno = input.trim() || hojeFmt;
+  }
+
+  try {
+    const res = await apiCall({ action: 'updateEstorno', row: item.row, estornado: ativar, dataEstorno });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    item.estornado   = ativar;
+    item.dataEstorno = ativar ? dataEstorno : '';
+    applyFilters();
+    showToast(ativar ? 'Estorno de glosa registrado!' : 'Estorno desfeito.');
   } catch(e) {
     showToast('Erro de conexão: ' + (e.message || e), 'error');
   }

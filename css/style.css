@@ -349,6 +349,8 @@ tr.row-glosado td { opacity: .45; text-decoration: line-through; }
 tr.row-glosado td:last-child { text-decoration: none; opacity: 1; }
 tr.row-rascunho td { background: #f0fdf4; }
 tr.row-rascunho:hover td { background: #dcfce7; }
+tr.row-estornado td { background: #f5f3ff; }
+tr.row-estornado:hover td { background: #ede9fe; }
 
 /* Botões de ação na tabela */
 .td-actions { white-space: nowrap; text-align: center; }

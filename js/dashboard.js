@@ -117,7 +117,7 @@ function applyFilters() {
         const cy = rm <= 2 ? ry - 1  : ry;
         const convPrefix = `${cy}-${String(cm).padStart(2,'0')}`;
         if ((l.tipo === 'Particular' || l.tipo === 'Rascunho') && !d.startsWith(partPrefix)) return false;
-        if (l.tipo === 'Convênio' && !d.startsWith(convPrefix)) return false;
+        if (l.tipo === 'Convênio' && !d.startsWith(convPrefix) && !d.startsWith(partPrefix)) return false;
       }
     } else {
       const from = document.getElementById('filterFrom').value;

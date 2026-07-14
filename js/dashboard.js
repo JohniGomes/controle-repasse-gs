@@ -444,9 +444,10 @@ async function exportPDF() {
   doc.text(`Dentista: ${dentista}`, 14, 41);
   doc.text(`Gerado em: ${geradoEm}`, 14, 47);
 
-  const ativos    = filteredLancamentos.filter(l => !l.glosado && !l.pendente);
-  const pendentes = filteredLancamentos.filter(l => !l.glosado &&  l.pendente);
-  const glosados  = filteredLancamentos.filter(l =>  l.glosado);
+  const ativos    = filteredLancamentos.filter(l => (!l.glosado || l.estornado) && !l.pendente);
+  const pendentes = filteredLancamentos.filter(l => !l.glosado && l.pendente);
+  const estornados = filteredLancamentos.filter(l => l.estornado);
+  const glosados  = filteredLancamentos.filter(l =>  l.glosado && !l.estornado);
   const totalRep  = ativos.reduce((s, l) => s + getRepasse(l), 0);
 
   const totalGlosaPDF = glosados.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
@@ -454,9 +455,10 @@ async function exportPDF() {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryRGB);
   let subPDF = [];
-  if (pendentes.length) subPDF.push(`${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}`);
-  if (glosados.length)  subPDF.push(`${glosados.length} glosado${glosados.length > 1 ? 's' : ''}`);
-  doc.text(`Total de Lançamentos: ${ativos.length}${subPDF.length ? ` (+${subPDF.join(', ')})` : ''}`, 200, 35);
+  if (pendentes.length)  subPDF.push(`${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}`);
+  if (estornados.length) subPDF.push(`${estornados.length} estorno${estornados.length > 1 ? 's' : ''}`);
+  if (glosados.length)   subPDF.push(`${glosados.length} glosado${glosados.length > 1 ? 's' : ''}`);
+  doc.text(`Total de Lançamentos: ${filteredLancamentos.length}${subPDF.length ? ` (${subPDF.join(', ')})` : ''}`, 200, 35);
   doc.text(`Total Repasse: ${formatCurrency(totalRep)}`, 200, 41);
   if (glosados.length) {
     doc.setTextColor(220, 38, 38);
@@ -465,18 +467,20 @@ async function exportPDF() {
   }
 
   // ── Tabela ───────────────────────────────────────────────────
-  const sortedAtivos    = [...ativos].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const ativosNormais   = ativos.filter(l => !l.estornado);
+  const sortedAtivos    = [...ativosNormais].sort((a, b) => String(b.data).localeCompare(String(a.data)));
   const sortedPendentes = [...pendentes].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const sortedEstornados= [...estornados].sort((a, b) => String(b.dataEstorno).localeCompare(String(a.dataEstorno)));
   const sortedGlosados  = [...glosados].sort((a, b) => String(b.data).localeCompare(String(a.data)));
-  const sorted = [...sortedAtivos, ...sortedPendentes, ...sortedGlosados];
+  const sorted = [...sortedAtivos, ...sortedPendentes, ...sortedEstornados, ...sortedGlosados];
 
   const rows = sorted.map(l => [
-    formatDate(l.data),
+    formatDate(l.estornado && l.dataEstorno ? l.dataEstorno : l.data),
     l.dentista,
     l.paciente,
     l.procedimento,
     l.dente || '—',
-    l.tipo,
+    l.estornado ? 'Estorno Glosa' : l.tipo,
     l.convenio || '—',
     l.gto || '—',
     formatCurrency(getRepasse(l))
@@ -503,13 +507,21 @@ async function exportPDF() {
       8: { cellWidth: 26, halign: 'right', fontStyle: 'bold', textColor: primaryRGB }
     },
     didParseCell: (data) => {
-      const rowIndex = data.row.index;
-      if (rowIndex >= sortedAtivos.length && rowIndex < sortedAtivos.length + sortedPendentes.length) {
+      const i = data.row.index;
+      const iP = sortedAtivos.length;
+      const iE = iP + sortedPendentes.length;
+      const iG = iE + sortedEstornados.length;
+      if (i >= iP && i < iE) {
         // Pendentes: fundo amarelo
         data.cell.styles.textColor = [146, 64, 14];
         data.cell.styles.fillColor = [254, 243, 199];
         data.cell.styles.fontStyle = 'italic';
-      } else if (rowIndex >= sortedAtivos.length + sortedPendentes.length) {
+      } else if (i >= iE && i < iG) {
+        // Estornados: fundo roxo claro
+        data.cell.styles.textColor = [124, 58, 237];
+        data.cell.styles.fillColor = [237, 233, 254];
+        data.cell.styles.fontStyle = 'italic';
+      } else if (i >= iG) {
         // Glosados: fundo vermelho
         data.cell.styles.textColor = dangerRGB;
         data.cell.styles.fillColor = [255, 235, 235];
@@ -684,7 +696,7 @@ function destroyCharts() {
 
 // Dados ativos (sem glosados) usados nos gráficos
 function getChartData() {
-  return filteredLancamentos.filter(l => !l.glosado && !l.pendente);
+  return filteredLancamentos.filter(l => (!l.glosado || l.estornado) && !l.pendente);
 }
 
 function renderCharts() {

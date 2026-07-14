@@ -958,22 +958,36 @@ async function saveEditLancamento() {
 }
 
 // ── Estorno de Glosa ──────────────────────────────────────────
-async function toggleEstorno(uid, ativar) {
+function toggleEstorno(uid, ativar) {
   const item = allLancamentos.find(l => l._uid === uid);
   if (!item) return;
   if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
 
-  let dataEstorno = '';
-  if (ativar) {
-    // Pede a data do estorno — padrão hoje
-    const hoje = new Date();
-    const pad  = n => String(n).padStart(2, '0');
-    const hojeFmt = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
-    const input = prompt('Data do estorno (AAAA-MM-DD):', hojeFmt);
-    if (input === null) return; // cancelado
-    dataEstorno = input.trim() || hojeFmt;
+  if (!ativar) {
+    // Desfazer estorno direto, sem modal
+    _salvarEstorno(uid, false, '');
+    return;
   }
 
+  // Abre modal com data de hoje pré-preenchida
+  const hoje = new Date();
+  const pad  = n => String(n).padStart(2, '0');
+  document.getElementById('estornoUid').value  = uid;
+  document.getElementById('estornoData').value = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
+  openModal('modalEstorno');
+}
+
+async function confirmarEstorno() {
+  const uid  = parseInt(document.getElementById('estornoUid').value);
+  const data = document.getElementById('estornoData').value;
+  if (!data) { showToast('Informe a data do estorno', 'warning'); return; }
+  closeModal('modalEstorno');
+  await _salvarEstorno(uid, true, data);
+}
+
+async function _salvarEstorno(uid, ativar, dataEstorno) {
+  const item = allLancamentos.find(l => l._uid === uid);
+  if (!item) return;
   try {
     const res = await apiCall({ action: 'updateEstorno', row: item.row, estornado: ativar, dataEstorno });
     if (res.error) { showToast(res.error, 'error'); return; }

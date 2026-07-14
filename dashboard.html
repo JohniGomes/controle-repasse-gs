@@ -239,6 +239,25 @@
 
   </main>
 
+  <!-- Modal: Estorno de Glosa -->
+  <div class="modal-overlay" id="modalEstorno" onclick="if(event.target===this)closeModal('modalEstorno')">
+    <div class="modal-box" style="max-width:360px;width:95%">
+      <h3>↩ Estorno de Glosa</h3>
+      <input type="hidden" id="estornoUid">
+      <p style="font-size:.84rem;color:var(--text-muted);margin-bottom:1rem">
+        Informe a data em que a glosa foi estornada (recebida).
+      </p>
+      <div>
+        <label class="form-label">Data do estorno</label>
+        <input type="date" id="estornoData" class="form-control">
+      </div>
+      <div class="modal-actions" style="margin-top:1.2rem">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modalEstorno')">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmarEstorno()" style="background:#7c3aed;border-color:#7c3aed">Confirmar Estorno</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Editar Lançamento -->
   <div class="modal-overlay" id="modalEditLancamento" onclick="if(event.target===this)closeModal('modalEditLancamento')">
     <div class="modal-box" style="max-width:520px;width:95%">
@@ -312,7 +331,7 @@
 
   <script src="js/config.js?v=7"></script>
   <script src="js/utils.js?v=7"></script>
-  <script src="js/dashboard.js?v=43"></script>
+  <script src="js/dashboard.js?v=44"></script>
   <script>
     // Popular select de procedimentos
     document.addEventListener('DOMContentLoaded', () => {

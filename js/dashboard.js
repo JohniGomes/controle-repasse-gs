@@ -98,7 +98,7 @@ function applyFilters() {
       if (!hay.includes(search)) return false;
     }
 
-    const d = String(l.data).slice(0, 10);
+    const d = (l.estornado && l.dataEstorno ? String(l.dataEstorno) : String(l.data)).slice(0, 10);
     if (activePeriod === 'month') {
       if (m && !d.startsWith(m)) return false;
     } else if (activePeriod === 'year') {

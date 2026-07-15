@@ -384,7 +384,10 @@ function switchArch(type) {
   });
   document.getElementById('archPermanente').classList.toggle('active', type === 'permanente');
   document.getElementById('archDecidua').classList.toggle('active',    type === 'decidua');
-  clearTooth();
+  // Reaplicar seleção visual nos botões da nova aba
+  document.querySelectorAll('.tooth-btn').forEach(b => {
+    b.classList.toggle('selected', selectedTeeth.includes(Number(b.dataset.tooth)));
+  });
 }
 
 let selectedTeeth = [];

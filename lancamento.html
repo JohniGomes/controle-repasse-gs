@@ -91,9 +91,13 @@
           <div class="form-group" style="margin-bottom:1rem">
             <label class="form-label">Procedimento *</label>
             <div class="input-group">
-              <select id="procedimento" class="form-select" required onchange="calcularRepasse()">
-                <option value="">Selecione...</option>
-              </select>
+              <div class="proc-select-wrap" style="flex:1;position:relative">
+                <input type="text" id="procSearch" class="form-control" placeholder="Buscar procedimento..."
+                       autocomplete="off" oninput="filterProc(this.value)" onfocus="openProcDropdown()"
+                       onblur="setTimeout(()=>closeProcDropdown(),180)">
+                <input type="hidden" id="procedimento">
+                <div id="procDropdown" class="proc-dropdown" style="display:none"></div>
+              </div>
               <button type="button" class="btn btn-success btn-icon" title="Cadastrar novo procedimento" onclick="openModal('modalAddProcedimento')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
@@ -382,19 +386,6 @@
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/lancamento.js?v=2"></script>
-  <script>
-    // Atualiza info de repasse ao mudar procedimento ou tipo
-    document.getElementById('procedimento').addEventListener('change', () => {
-      const tipo = document.getElementById('radioParticular').checked ? 'particular' : 'convenio';
-      const info = document.getElementById('repasseInfo');
-      if (tipo === 'particular') {
-        const opt = document.getElementById('procedimento');
-        const rep = opt.options[opt.selectedIndex]?.dataset.repasse;
-        info.textContent = rep ? `Fixo: ${formatCurrency(rep)}` : 'Selecione o procedimento';
-      } else {
-        info.textContent = '35% do valor';
-      }
-    });
-  </script>
+  <script src="js/lancamento.js?v=3"></script>
 </body>
 </html>

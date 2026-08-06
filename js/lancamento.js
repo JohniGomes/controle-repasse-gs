@@ -6,6 +6,7 @@ let dentistas = [];
 let convenios = [];
 let procedimentosCustom = [];
 let lancamentosExistentes = [];
+let allProcs = [];
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,38 +31,77 @@ async function loadProcedimentos() {
     const res = await apiCall({ action: 'getProcedimentos' });
     procedimentosCustom = res.data || [];
   } catch { /* usa só a lista estática */ }
-  populateProcedimentos();
+  buildProcList();
 }
 
-function populateProcedimentos() {
-  const sel = document.getElementById('procedimento');
-  // Limpa mantendo só o placeholder
-  sel.innerHTML = '<option value="">Selecione...</option>';
+// Monta lista unificada: customizados no topo, fixos abaixo
+function buildProcList() {
+  allProcs = [
+    ...procedimentosCustom.map(p => ({ nome: p.nome, repasse: 0, id: p.id, isCustom: true })),
+    ...PROCEDIMENTOS.map(p => ({ nome: p.nome, repasse: p.repasse, id: null, isCustom: false }))
+  ];
+  renderProcDropdown(allProcs);
+}
 
-  // Procedimentos fixos (config.js)
-  PROCEDIMENTOS.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.nome;
-    opt.dataset.repasse = p.repasse;
-    opt.textContent = p.nome;
-    sel.appendChild(opt);
-  });
+function renderProcDropdown(items) {
+  const dd = document.getElementById('procDropdown');
+  if (!items.length) {
+    dd.innerHTML = '<div class="proc-item proc-empty">Nenhum resultado</div>';
+    return;
+  }
 
-  // Procedimentos customizados (Google Sheets)
-  if (procedimentosCustom.length) {
-    const sep = document.createElement('option');
-    sep.disabled = true;
-    sep.textContent = '── Personalizados ──';
-    sel.appendChild(sep);
+  let html = '';
+  const customItems = items.filter(p => p.isCustom);
+  const fixedItems  = items.filter(p => !p.isCustom);
 
-    procedimentosCustom.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.nome;
-      opt.dataset.repasse = '';   // repasse manual para procedimentos customizados
-      opt.textContent = p.nome;
-      sel.appendChild(opt);
+  if (customItems.length) {
+    html += '<div class="proc-group-label">Personalizados</div>';
+    customItems.forEach(p => {
+      html += `<div class="proc-item" onmousedown="selectProc('${escHtml(p.nome)}', 0)">
+        <span>${escHtml(p.nome)}</span>
+        <button type="button" class="proc-del-btn" onmousedown="event.stopPropagation();deleteProcedimento('${p.id}','${escHtml(p.nome)}')" title="Excluir">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`;
     });
   }
+  if (customItems.length && fixedItems.length) {
+    html += '<div class="proc-group-label" style="margin-top:.3rem">Padrão</div>';
+  }
+  fixedItems.forEach(p => {
+    html += `<div class="proc-item" onmousedown="selectProc('${escHtml(p.nome)}', ${p.repasse})">${escHtml(p.nome)}</div>`;
+  });
+
+  dd.innerHTML = html;
+}
+
+function escHtml(s) { return String(s).replace(/'/g, "\\'"); }
+
+function openProcDropdown() {
+  filterProc(document.getElementById('procSearch').value);
+  document.getElementById('procDropdown').style.display = 'block';
+}
+
+function closeProcDropdown() {
+  document.getElementById('procDropdown').style.display = 'none';
+}
+
+function filterProc(query) {
+  const q = query.trim().toLowerCase();
+  const filtered = q ? allProcs.filter(p => p.nome.toLowerCase().includes(q)) : allProcs;
+  renderProcDropdown(filtered);
+  document.getElementById('procDropdown').style.display = 'block';
+}
+
+function selectProc(nome, repasse) {
+  document.getElementById('procSearch').value   = nome;
+  document.getElementById('procedimento').value = nome;
+  closeProcDropdown();
+  calcularRepasse();
+  // Atualiza info de repasse
+  const tipo = document.getElementById('radioParticular').checked ? 'particular' : 'convenio';
+  const info = document.getElementById('repasseInfo');
+  if (info) info.textContent = tipo === 'particular' && repasse ? `Fixo: ${formatCurrency(repasse)}` : tipo === 'convenio' ? '35% do valor' : 'Selecione o procedimento';
 }
 
 async function addProcedimento() {
@@ -70,13 +110,28 @@ async function addProcedimento() {
   try {
     const res = await apiCall({ action: 'addProcedimento', nome });
     if (res.error) { showToast(res.error, 'error'); return; }
-    procedimentosCustom.push({ id: res.id, nome: res.nome });
-    populateProcedimentos();
-    document.getElementById('procedimento').value = res.nome;
+    procedimentosCustom.unshift({ id: res.id, nome: res.nome }); // topo
+    buildProcList();
+    selectProc(res.nome, 0);
     closeModal('modalAddProcedimento');
-    calcularRepasse();
     showToast('Procedimento cadastrado!');
   } catch { showToast('Erro ao cadastrar procedimento', 'error'); }
+}
+
+async function deleteProcedimento(id, nome) {
+  if (!confirm(`Excluir o procedimento "${nome}"?`)) return;
+  try {
+    const res = await apiCall({ action: 'deleteProcedimento', id });
+    if (res.error) { showToast(res.error, 'error'); return; }
+    procedimentosCustom = procedimentosCustom.filter(p => p.id !== id);
+    // Limpa seleção se era o que estava selecionado
+    if (document.getElementById('procedimento').value === nome) {
+      document.getElementById('procSearch').value   = '';
+      document.getElementById('procedimento').value = '';
+    }
+    buildProcList();
+    showToast('Procedimento excluído!');
+  } catch { showToast('Erro ao excluir procedimento', 'error'); }
 }
 
 // ── Dentistas ─────────────────────────────────────────────────
@@ -194,13 +249,13 @@ function selectTipo(tipo) {
 function calcularRepasse() {
   const tipo   = document.getElementById('radioParticular').checked ? 'particular' : document.getElementById('radioConvenio').checked ? 'convenio' : 'rascunho';
   const valor  = parseFloat(document.getElementById('valor').value) || 0;
-  const sel    = document.getElementById('procedimento');
-  const opt    = sel.options[sel.selectedIndex];
+  const nomeSel = document.getElementById('procedimento').value;
+  const proc   = allProcs.find(p => p.nome === nomeSel);
   let repasse  = 0;
   let manual   = false;
 
-  if ((tipo === 'particular' || tipo === 'rascunho') && opt && opt.dataset.repasse) {
-    repasse = parseFloat(opt.dataset.repasse) || 0;
+  if ((tipo === 'particular' || tipo === 'rascunho') && proc) {
+    repasse = proc.repasse || 0;
     if (!repasse) manual = true;   // procedimento customizado sem repasse fixo
   } else if (tipo === 'convenio' && valor > 0) {
     repasse = valor * 0.35;
@@ -281,6 +336,8 @@ async function salvarLancamento(e) {
     showToast('Lançamento salvo com sucesso!');
     document.getElementById('lancamentoForm').reset();
     document.getElementById('gto').value = '';
+    document.getElementById('procSearch').value = '';
+    document.getElementById('procedimento').value = '';
     setDefaultDate();
     selectTipo('particular');
     calcularRepasse();

@@ -22,7 +22,8 @@ function doGet(e) {
       case 'addConvenio':       result = addConvenio(e.parameter.nome);                       break;
       case 'deleteConvenio':    result = deleteConvenio(e.parameter.id);                      break;
       case 'getProcedimentos':  result = getProcedimentos();                                   break;
-      case 'addProcedimento':   result = addProcedimento(e.parameter.nome);                   break;
+      case 'addProcedimento':      result = addProcedimento(e.parameter.nome);                break;
+      case 'deleteProcedimento':   result = deleteProcedimento(e.parameter.id);              break;
       case 'addLancamento':     result = addLancamento(JSON.parse(e.parameter.data));         break;
       case 'getLancamentos':    result = getLancamentos();                                     break;
       case 'debugDatas':        result = debugDatas();                                         break;
@@ -153,6 +154,22 @@ function addProcedimento(nome) {
   const id = uid();
   getSheet(SHEET_PROCEDIMENTOS).appendRow([id, nome.trim(), true]);
   return { success: true, id, nome: nome.trim() };
+}
+
+function deleteProcedimento(id) {
+  try {
+    const sheet = getSheet(SHEET_PROCEDIMENTOS);
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(id)) {
+        sheet.deleteRow(i + 1);
+        return { success: true };
+      }
+    }
+    return { error: 'Procedimento não encontrado' };
+  } catch(err) {
+    return { error: err.toString() };
+  }
 }
 
 // ── Lançamentos ───────────────────────────────────────────────

@@ -749,3 +749,52 @@ tr.row-estornado:hover td { background: #ede9fe; }
   animation: spin .8s linear infinite;
 }
 .page-loader p { font-size: .85rem; color: var(--text-muted); }
+
+/* ── Dropdown de Procedimentos ────────────────────────────────── */
+.proc-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 999;
+  padding: .3rem 0;
+}
+.proc-group-label {
+  padding: .25rem .8rem;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-muted);
+}
+.proc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .45rem .8rem;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: background .12s;
+  gap: .5rem;
+}
+.proc-item:hover { background: var(--primary-light); color: var(--primary); }
+.proc-item span  { flex: 1; }
+.proc-empty      { color: var(--text-muted); font-size: .82rem; cursor: default; }
+.proc-empty:hover { background: none; color: var(--text-muted); }
+.proc-del-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: .15rem .3rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.proc-del-btn:hover { background: #fee2e2; color: var(--danger); }

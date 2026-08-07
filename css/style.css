@@ -788,15 +788,15 @@ tr.row-estornado:hover td { background: #ede9fe; }
 .proc-empty      { color: #949DA6; font-size: .82rem; cursor: default; }
 .proc-empty:hover { background: none; color: #949DA6; }
 .proc-del-btn {
-  background: none;
-  border: 1px solid #d4d9de;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
   cursor: pointer;
-  color: #949DA6;
-  padding: .2rem .35rem;
+  color: #dc2626;
+  padding: .2rem .4rem;
   border-radius: 4px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
   line-height: 1;
 }
-.proc-del-btn:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+.proc-del-btn:hover { background: #fecaca; border-color: #f87171; color: #b91c1c; }

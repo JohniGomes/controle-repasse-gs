@@ -755,13 +755,13 @@ tr.row-estornado:hover td { background: #ede9fe; }
   position: absolute;
   top: calc(100% + 2px);
   left: 0; right: 0;
-  background: var(--card);
-  border: 1.5px solid var(--border);
+  background: #ffffff;
+  border: 1.5px solid #d4d9de;
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
   max-height: 260px;
   overflow-y: auto;
-  z-index: 999;
+  z-index: 9999;
   padding: .3rem 0;
 }
 .proc-group-label {
@@ -770,7 +770,7 @@ tr.row-estornado:hover td { background: #ede9fe; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .5px;
-  color: var(--text-muted);
+  color: #949DA6;
 }
 .proc-item {
   display: flex;
@@ -778,23 +778,25 @@ tr.row-estornado:hover td { background: #ede9fe; }
   justify-content: space-between;
   padding: .45rem .8rem;
   font-size: .85rem;
+  color: #1F3140;
   cursor: pointer;
   transition: background .12s;
   gap: .5rem;
 }
-.proc-item:hover { background: var(--primary-light); color: var(--primary); }
+.proc-item:hover { background: #e4e8ed; color: #1F3140; }
 .proc-item span  { flex: 1; }
-.proc-empty      { color: var(--text-muted); font-size: .82rem; cursor: default; }
-.proc-empty:hover { background: none; color: var(--text-muted); }
+.proc-empty      { color: #949DA6; font-size: .82rem; cursor: default; }
+.proc-empty:hover { background: none; color: #949DA6; }
 .proc-del-btn {
   background: none;
-  border: none;
+  border: 1px solid #d4d9de;
   cursor: pointer;
-  color: var(--text-muted);
-  padding: .15rem .3rem;
+  color: #949DA6;
+  padding: .2rem .35rem;
   border-radius: 4px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  line-height: 1;
 }
-.proc-del-btn:hover { background: #fee2e2; color: var(--danger); }
+.proc-del-btn:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }

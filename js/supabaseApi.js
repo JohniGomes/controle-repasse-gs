@@ -150,9 +150,21 @@ function mapLancamento(d) {
 }
 
 async function getLancamentos() {
-  const { data, error } = await sb.from('lancamentos').select('*').order('data', { ascending: false }).order('created_at', { ascending: false });
-  if (error) return { error: error.message };
-  return { success: true, data: data.map(mapLancamento) };
+  // O PostgREST limita a 1000 linhas por padrão — pagina explicitamente
+  // para trazer todos os lançamentos, não só os primeiros 1000.
+  const PAGE_SIZE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await sb.from('lancamentos').select('*')
+      .order('data', { ascending: false }).order('created_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) return { error: error.message };
+    all = all.concat(data);
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return { success: true, data: all.map(mapLancamento) };
 }
 
 async function addLancamento(l) {

@@ -88,7 +88,7 @@ function renderTabela() {
   tbody.innerHTML = dados.map((item, _) => {
     const st      = getStatus(item);
     const badgeHtml = statusBadge(st);
-    const rowIdx  = item._rowIndex;
+    const id      = item.id;
     return `
     <tr>
       <td style="font-weight:600">${item.nome}</td>
@@ -100,13 +100,13 @@ function renderTabela() {
       <td>${badgeHtml}</td>
       <td style="color:var(--text-muted);font-size:.82rem">${formatDate(item.ultimoReabastecimento) || '—'}</td>
       <td class="td-actions">
-        <button class="btn-action" onclick="abrirMovimentacao(${rowIdx})" title="Movimentar estoque" style="color:var(--primary)">
+        <button class="btn-action" onclick="abrirMovimentacao('${id}')" title="Movimentar estoque" style="color:var(--primary)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
         </button>
-        <button class="btn-action" onclick="abrirEditar(${rowIdx})" title="Editar item" style="color:var(--accent)">
+        <button class="btn-action" onclick="abrirEditar('${id}')" title="Editar item" style="color:var(--accent)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="btn-action btn-del" onclick="deletarItem(${rowIdx})" title="Excluir item">
+        <button class="btn-action btn-del" onclick="deletarItem('${id}')" title="Excluir item">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </td>
@@ -135,11 +135,11 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
 
-function abrirEditar(rowIndex) {
-  const item = estoqueData.find(i => i._rowIndex === rowIndex);
+function abrirEditar(id) {
+  const item = estoqueData.find(i => i.id === id);
   if (!item) return;
   document.getElementById('modalItemTitulo').textContent = 'Editar Item';
-  document.getElementById('editRowIndex').value  = rowIndex;
+  document.getElementById('editItemId').value    = id;
   document.getElementById('itemNome').value      = item.nome;
   document.getElementById('itemUnidade').value   = item.unidade || 'Unidade';
   document.getElementById('itemQtdAtual').value  = item.qtdAtual;
@@ -150,7 +150,7 @@ function abrirEditar(rowIndex) {
 
 function limparModalItem() {
   document.getElementById('modalItemTitulo').textContent = 'Cadastrar Item';
-  document.getElementById('editRowIndex').value  = '';
+  document.getElementById('editItemId').value   = '';
   document.getElementById('itemNome').value      = '';
   document.getElementById('itemCategoria').value = '';
   document.getElementById('itemUnidade').value   = 'Unidade';
@@ -166,7 +166,7 @@ async function salvarItem() {
   const categoria= document.getElementById('itemCategoria').value;
   const unidade  = document.getElementById('itemUnidade').value;
   const qtdAtual = document.getElementById('itemQtdAtual').value;
-  const rowIndex = document.getElementById('editRowIndex').value;
+  const id       = document.getElementById('editItemId').value;
 
   if (!nome || !categoria || qtdAtual === '') {
     showToast('Preencha todos os campos obrigatórios', 'warning'); return;
@@ -177,17 +177,17 @@ async function salvarItem() {
 
   try {
     const params = {
-      action: rowIndex ? 'updateItemEstoque' : 'addItemEstoque',
+      action: id ? 'updateItemEstoque' : 'addItemEstoque',
       nome, categoria, unidade,
       qtdAtual: Number(qtdAtual),
       qtdMin:   0
     };
-    if (rowIndex) params.rowIndex = rowIndex;
+    if (id) params.id = id;
 
     const res = await apiCall(params);
     if (res.error) { showToast(res.error, 'error'); return; }
 
-    showToast(rowIndex ? 'Item atualizado!' : 'Item cadastrado!');
+    showToast(id ? 'Item atualizado!' : 'Item cadastrado!');
     closeModal('modalAddItem');
     limparModalItem();
     await loadEstoque();
@@ -199,10 +199,10 @@ async function salvarItem() {
 }
 
 // ── Movimentação ──────────────────────────────────────────────
-function abrirMovimentacao(rowIndex) {
-  const item = estoqueData.find(i => i._rowIndex === rowIndex);
+function abrirMovimentacao(id) {
+  const item = estoqueData.find(i => i.id === id);
   if (!item) return;
-  document.getElementById('movRowIndex').value  = rowIndex;
+  document.getElementById('movItemId').value  = id;
   document.getElementById('movItemNome').textContent = `${item.nome} — Qtd atual: ${item.qtdAtual}`;
   document.getElementById('movQtd').value = '';
   selectMovTipo('entrada');
@@ -217,13 +217,13 @@ function selectMovTipo(tipo) {
 }
 
 async function confirmarMovimentacao() {
-  const rowIndex = document.getElementById('movRowIndex').value;
-  const tipo     = document.querySelector('input[name="movTipo"]:checked').value;
-  const qtd      = Number(document.getElementById('movQtd').value);
+  const id  = document.getElementById('movItemId').value;
+  const tipo = document.querySelector('input[name="movTipo"]:checked').value;
+  const qtd  = Number(document.getElementById('movQtd').value);
 
   if (!qtd || qtd <= 0) { showToast('Informe uma quantidade válida', 'warning'); return; }
 
-  const item = estoqueData.find(i => i._rowIndex === Number(rowIndex));
+  const item = estoqueData.find(i => i.id === id);
   if (tipo === 'saida' && qtd > Number(item.qtdAtual)) {
     showToast('Quantidade insuficiente em estoque', 'warning'); return;
   }
@@ -232,7 +232,7 @@ async function confirmarMovimentacao() {
   btn.disabled = true; btn.textContent = 'Salvando...';
 
   try {
-    const res = await apiCall({ action: 'movimentarEstoque', rowIndex, tipo, qtd });
+    const res = await apiCall({ action: 'movimentarEstoque', id, tipo, qtd });
     if (res.error) { showToast(res.error, 'error'); return; }
     showToast(tipo === 'entrada' ? 'Entrada registrada!' : 'Saída registrada!');
     closeModal('modalMovimentar');
@@ -245,10 +245,10 @@ async function confirmarMovimentacao() {
 }
 
 // ── Deletar ───────────────────────────────────────────────────
-async function deletarItem(rowIndex) {
+async function deletarItem(id) {
   if (!confirm('Excluir este item do estoque? A ação não pode ser desfeita.')) return;
   try {
-    const res = await apiCall({ action: 'deleteItemEstoque', rowIndex });
+    const res = await apiCall({ action: 'deleteItemEstoque', id });
     if (res.error) { showToast(res.error, 'error'); return; }
     showToast('Item excluído');
     await loadEstoque();

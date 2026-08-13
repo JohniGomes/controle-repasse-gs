@@ -4,11 +4,9 @@
 
 let allLancamentos = [];
 let filteredLancamentos = [];
-let dentistasDB = [];
-let conveniosDB = [];
 let chartInstances = {};
 let allMetas = [];
-const repasseEdits = new Map(); // _uid → valor editado pelo usuário
+const repasseEdits = new Map(); // id → valor editado pelo usuário
 
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
@@ -28,11 +26,11 @@ async function loadAllData() {
       apiCall({ action: 'getMetas' })
     ]);
     if (resL.error) { showToast('Erro: ' + resL.error, 'error'); return; }
-    allLancamentos = (resL.data || []).map((l, i) => ({
+    allLancamentos = (resL.data || []).map(l => ({
       ...l,
-      _uid: i,
       data: normalizeDate(l.data, l.timestamp)
     }));
+    if (resM.error) { showToast('Erro ao carregar metas: ' + resM.error, 'error'); return; }
     allMetas = resM.data || [];
   } catch (e) {
     showToast('Erro de conexão: ' + (e.message || e), 'error');
@@ -58,6 +56,13 @@ function populateFiltersFromData() {
   dentistas.forEach(d => {
     const o = document.createElement('option');
     o.value = d; o.textContent = d; dSel.appendChild(o);
+  });
+
+  const procedimentos = [...new Set(allLancamentos.map(l => l.procedimento).filter(Boolean))].sort();
+  const pSel = document.getElementById('filterProcedimento');
+  procedimentos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p; pSel.appendChild(o);
   });
 
   // Filtro de tipo é fixo (Particular / Convênio) — não popula dinamicamente
@@ -250,7 +255,7 @@ function renderTable() {
     } else if (l.pendente) {
       repasseCell = `<span style="white-space:nowrap"><span style="color:#b45309;font-weight:700">${formatCurrency(getRepasse(l))}</span> <span style="display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.7rem;font-weight:700;background:#fef3c7;color:#b45309;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">⏸ PENDENTE</span></span>`;
     } else {
-      repasseCell = `<span class="repasse-valor" data-uid="${l._uid}" data-row="${l.row}" data-val="${l.repasse}"
+      repasseCell = `<span class="repasse-valor" data-id="${l.id}" data-val="${l.repasse}"
               style="color:var(--primary);font-weight:700;cursor:pointer;border-bottom:1.5px dashed var(--primary)"
               title="Duplo clique para editar"
               ondblclick="editRepasse(this)">${formatCurrency(getRepasse(l))}</span>`;
@@ -260,24 +265,24 @@ function renderTable() {
     if (isConvenio) {
       if (l.estornado) {
         // Desfazer estorno
-        btnGlosa = `<button class="btn-action" onclick="toggleEstorno(${l._uid}, false)"
+        btnGlosa = `<button class="btn-action" onclick="toggleEstorno('${l.id}', false)"
            title="Desfazer estorno" style="color:#7c3aed">
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
          </button>`;
       } else if (l.glosado) {
         // Estornar glosa + Desfazer glosa
         btnGlosa = `
-         <button class="btn-action" onclick="toggleEstorno(${l._uid}, true)"
+         <button class="btn-action" onclick="toggleEstorno('${l.id}', true)"
            title="Registrar estorno de glosa" style="color:#7c3aed">
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
          </button>
-         <button class="btn-action btn-unglose" onclick="toggleGlosa(${l._uid})"
+         <button class="btn-action btn-unglose" onclick="toggleGlosa('${l.id}')"
            title="Desfazer glosa (erro)">
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
          </button>`;
       } else {
         // Marcar como glosado
-        btnGlosa = `<button class="btn-action btn-glose" onclick="toggleGlosa(${l._uid})"
+        btnGlosa = `<button class="btn-action btn-glose" onclick="toggleGlosa('${l.id}')"
            title="Marcar como glosado">
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
          </button>`;
@@ -285,7 +290,7 @@ function renderTable() {
     }
 
     const btnPendente = isParticular
-      ? `<button class="btn-action" onclick="togglePendente(${l._uid})"
+      ? `<button class="btn-action" onclick="togglePendente('${l.id}')"
            title="${l.pendente ? 'Liberar repasse' : 'Congelar repasse'}"
            style="color:${l.pendente ? '#16a34a' : '#b45309'}">
            ${l.pendente
@@ -310,10 +315,10 @@ function renderTable() {
       <td class="td-actions">
         ${btnGlosa}
         ${btnPendente}
-        <button class="btn-action" onclick="openEditModal(${l._uid})" title="Editar lançamento" style="color:var(--primary)">
+        <button class="btn-action" onclick="openEditModal('${l.id}')" title="Editar lançamento" style="color:var(--primary)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </button>
-        <button class="btn-action btn-del" onclick="deleteRow(${l._uid})" title="Excluir lançamento">
+        <button class="btn-action btn-del" onclick="deleteRow('${l.id}')" title="Excluir lançamento">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </td>
@@ -322,13 +327,12 @@ function renderTable() {
 }
 
 // ── Pendente (Particular) ─────────────────────────────────────
-async function togglePendente(uid) {
-  const item = allLancamentos.find(l => l._uid === uid);
+async function togglePendente(id) {
+  const item = allLancamentos.find(l => l.id === id);
   if (!item) return;
-  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
   const novo = !item.pendente;
   try {
-    const res = await apiCall({ action: 'updatePendente', row: item.row, pendente: novo });
+    const res = await apiCall({ action: 'updatePendente', id, pendente: novo });
     if (res.error) { showToast(res.error, 'error'); return; }
     item.pendente = novo;
     applyFilters();
@@ -337,13 +341,12 @@ async function togglePendente(uid) {
 }
 
 // ── Glosa ─────────────────────────────────────────────────────
-async function toggleGlosa(uid) {
-  const item = allLancamentos.find(l => l._uid === uid);
+async function toggleGlosa(id) {
+  const item = allLancamentos.find(l => l.id === id);
   if (!item) return;
-  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
   const novo = !item.glosado;
   try {
-    const res = await apiCall({ action: 'updateGlosa', row: item.row, glosado: novo });
+    const res = await apiCall({ action: 'updateGlosa', id, glosado: novo });
     if (res.error) { showToast(res.error, 'error'); return; }
     item.glosado = novo;
     applyFilters();
@@ -352,25 +355,24 @@ async function toggleGlosa(uid) {
 }
 
 // ── Excluir linha ─────────────────────────────────────────────
-async function deleteRow(uid) {
+async function deleteRow(id) {
   if (!confirm('Excluir este lançamento? A ação não pode ser desfeita.')) return;
-  const item = allLancamentos.find(l => l._uid === uid);
+  const item = allLancamentos.find(l => l.id === id);
   if (!item) return;
-  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
   try {
-    const res = await apiCall({ action: 'deleteLancamento', row: item.row });
+    const res = await apiCall({ action: 'deleteLancamento', id });
     if (res.error) { showToast(res.error, 'error'); return; }
-    allLancamentos = allLancamentos.filter(l => l._uid !== uid);
-    repasseEdits.delete(uid);
+    allLancamentos = allLancamentos.filter(l => l.id !== id);
+    repasseEdits.delete(id);
     applyFilters();
     showToast('Lançamento excluído');
   } catch { showToast('Erro ao excluir', 'error'); }
 }
 
 // ── Export PDF ────────────────────────────────────────────────
-// Retorna o repasse correto: usa edit do usuário (por _uid) se existir
+// Retorna o repasse correto: usa edit do usuário (por id) se existir
 function getRepasse(l) {
-  return repasseEdits.has(l._uid) ? repasseEdits.get(l._uid) : Number(l.repasse);
+  return repasseEdits.has(l.id) ? repasseEdits.get(l.id) : Number(l.repasse);
 }
 
 async function exportPDF() {
@@ -417,9 +419,10 @@ async function exportPDF() {
 
   const activePeriod = document.querySelector('.period-tab.active')?.dataset.type || 'month';
   let periodoStr = '';
+  let mesesFiltro = []; // meses YYYY-MM relevantes ao período, para casar com Metas
   if (activePeriod === 'month') {
     const m = document.getElementById('filterMonth').value;
-    if (m) { const [y, mo] = m.split('-'); periodoStr = `${mo}/${y}`; }
+    if (m) { const [y, mo] = m.split('-'); periodoStr = `${mo}/${y}`; mesesFiltro = [m]; }
   } else if (activePeriod === 'year') {
     periodoStr = document.getElementById('filterYear').value || 'Todos';
   } else if (activePeriod === 'referencia') {
@@ -430,6 +433,7 @@ async function exportPDF() {
       const cm = rm <= 2 ? rm + 10 : rm - 2; const cy = rm <= 2 ? ry - 1 : ry;
       const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       periodoStr = `Referência ${nomes[rm-1]}/${ry} (Part: ${nomes[pm-1]}/${py} | Conv: ${nomes[cm-1]}/${cy})`;
+      mesesFiltro = [`${py}-${String(pm).padStart(2,'0')}`, `${cy}-${String(cm).padStart(2,'0')}`];
     }
   } else {
     const f = document.getElementById('filterFrom').value;
@@ -466,6 +470,31 @@ async function exportPDF() {
     doc.setTextColor(...primaryRGB);
   }
 
+  // ── Metas do período (dentista filtrado, ou todas se "Todos") ─
+  const mesesAtivos = mesesFiltro.length ? new Set(mesesFiltro) : new Set(filteredLancamentos.map(l => String(l.data).slice(0,7)));
+  const dentFiltroPDF = document.getElementById('filterDentista').value;
+  const metasPDF = allMetas.filter(m => mesesAtivos.has(m.mes) && (!dentFiltroPDF || m.dentista === dentFiltroPDF));
+
+  let metasStartY = glosados.length ? 58 : 52;
+  if (metasPDF.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...primaryRGB);
+    doc.text('Metas do período:', 14, metasStartY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    let metaLine = metasStartY;
+    metasPDF.forEach(m => {
+      metaLine += 5;
+      const partes = [];
+      if (m.meta)        partes.push(`Particulares: ${m.meta}`);
+      if (m.indicacoes)  partes.push(`Indicações: ${m.indicacoes}`);
+      if (m.metaValorRS) partes.push(`Meta R$: ${formatCurrency(m.metaValorRS)}`);
+      doc.text(`${m.dentista} (${formatMesDash(m.mes)}) — ${partes.join(' · ') || 'sem valores definidos'}`, 18, metaLine);
+    });
+    metasStartY = metaLine + 4;
+  }
+
   // ── Tabela ───────────────────────────────────────────────────
   const ativosNormais   = ativos.filter(l => !l.estornado);
   const sortedAtivos    = [...ativosNormais].sort((a, b) => String(b.data).localeCompare(String(a.data)));
@@ -489,7 +518,7 @@ async function exportPDF() {
   const dangerRGB = [220, 38, 38];
 
   doc.autoTable({
-    startY: glosados.length ? 58 : 52,
+    startY: metasStartY,
     head: [['Data', 'Dentista', 'Paciente', 'Procedimento', 'Dente', 'Tipo', 'Convênio', 'GTO', 'Repasse']],
     body: rows,
     styles: { fontSize: 8, font: 'helvetica', cellPadding: 2.5 },
@@ -582,7 +611,7 @@ async function exportPDF() {
 function editRepasse(span) {
   if (span.querySelector('input')) return;
 
-  const uid      = parseInt(span.dataset.uid);
+  const id       = span.dataset.id;
   const valAtual = parseFloat(span.dataset.val) || 0;
 
   // Guarda o valor original no próprio span para restaurar se necessário
@@ -604,13 +633,13 @@ function editRepasse(span) {
     if (e.key === 'Escape') { span.dataset.val = valAtual; restoreSpan(span, valAtual); }
   });
 
-  input.addEventListener('blur', () => saveRepasse(span, uid));
+  input.addEventListener('blur', () => saveRepasse(span, id));
 
   input.focus();
   input.select();
 }
 
-async function saveRepasse(span, uid) {
+async function saveRepasse(span, id) {
   const input = span.querySelector('input');
   if (!input || input.dataset.saving) return;   // evita duplo disparo
   input.dataset.saving = '1';
@@ -626,11 +655,11 @@ async function saveRepasse(span, uid) {
   input.disabled = true;
   input.style.opacity = '.5';
 
-  const item = allLancamentos.find(l => l._uid === uid);
+  const item = allLancamentos.find(l => l.id === id);
   if (!item) { restoreSpan(span, valOrig); return; }
 
   try {
-    const res = await apiCall({ action: 'updateRepasse', row: item.row, repasse: novoVal });
+    const res = await apiCall({ action: 'updateRepasse', id, repasse: novoVal });
 
     if (res.error) {
       showToast('Erro: ' + res.error, 'error');
@@ -638,8 +667,7 @@ async function saveRepasse(span, uid) {
       return;
     }
 
-    // Salva pelo _uid — imune a IDs duplicados
-    repasseEdits.set(uid, novoVal);
+    repasseEdits.set(id, novoVal);
     item.repasse = novoVal;
 
     span.dataset.val        = novoVal;
@@ -914,11 +942,10 @@ function toggleEditConvenio() {
   document.getElementById('editConvenioWrap').style.display = tipo === 'Convênio' ? '' : 'none';
 }
 
-function openEditModal(uid) {
-  const l = allLancamentos.find(x => x._uid === uid);
+function openEditModal(id) {
+  const l = allLancamentos.find(x => x.id === id);
   if (!l) return;
-  document.getElementById('editLancUid').value         = uid;
-  document.getElementById('editLancRow').value         = l.row;
+  document.getElementById('editLancId').value          = id;
   document.getElementById('editLancData').value        = l.data ? l.data.slice(0,10) : '';
   document.getElementById('editLancDentista').value    = l.dentista || '';
   document.getElementById('editLancPaciente').value    = l.paciente || '';
@@ -934,9 +961,8 @@ function openEditModal(uid) {
 }
 
 async function saveEditLancamento() {
-  const uid  = parseInt(document.getElementById('editLancUid').value);
-  const row  = document.getElementById('editLancRow').value;
-  if (!row) { showToast('Linha inválida — recarregue a página', 'error'); return; }
+  const id = document.getElementById('editLancId').value;
+  if (!id) { showToast('Registro inválido', 'error'); return; }
 
   const data = {
     data:         document.getElementById('editLancData').value,
@@ -956,10 +982,10 @@ async function saveEditLancamento() {
   }
 
   try {
-    const res = await apiCall({ action: 'updateLancamento', row, data: JSON.stringify(data) });
+    const res = await apiCall({ action: 'updateLancamento', id, data });
     if (res.error) { showToast(res.error, 'error'); return; }
     // Atualiza in-memory
-    const item = allLancamentos.find(x => x._uid === uid);
+    const item = allLancamentos.find(x => x.id === id);
     if (item) Object.assign(item, data);
     closeModal('modalEditLancamento');
     applyFilters();
@@ -970,38 +996,37 @@ async function saveEditLancamento() {
 }
 
 // ── Estorno de Glosa ──────────────────────────────────────────
-function toggleEstorno(uid, ativar) {
-  const item = allLancamentos.find(l => l._uid === uid);
+function toggleEstorno(id, ativar) {
+  const item = allLancamentos.find(l => l.id === id);
   if (!item) return;
-  if (!item.row) { showToast('Recarregue a página para sincronizar os dados', 'warning'); return; }
 
   if (!ativar) {
     // Desfazer estorno direto, sem modal
-    _salvarEstorno(uid, false, '');
+    _salvarEstorno(id, false, '');
     return;
   }
 
   // Abre modal com data de hoje pré-preenchida
   const hoje = new Date();
   const pad  = n => String(n).padStart(2, '0');
-  document.getElementById('estornoUid').value  = uid;
+  document.getElementById('estornoId').value   = id;
   document.getElementById('estornoData').value = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
   openModal('modalEstorno');
 }
 
 async function confirmarEstorno() {
-  const uid  = parseInt(document.getElementById('estornoUid').value);
+  const id   = document.getElementById('estornoId').value;
   const data = document.getElementById('estornoData').value;
   if (!data) { showToast('Informe a data do estorno', 'warning'); return; }
   closeModal('modalEstorno');
-  await _salvarEstorno(uid, true, data);
+  await _salvarEstorno(id, true, data);
 }
 
-async function _salvarEstorno(uid, ativar, dataEstorno) {
-  const item = allLancamentos.find(l => l._uid === uid);
+async function _salvarEstorno(id, ativar, dataEstorno) {
+  const item = allLancamentos.find(l => l.id === id);
   if (!item) return;
   try {
-    const res = await apiCall({ action: 'updateEstorno', row: item.row, estornado: ativar, dataEstorno });
+    const res = await apiCall({ action: 'updateEstorno', id, estornado: ativar, dataEstorno });
     if (res.error) { showToast(res.error, 'error'); return; }
     item.estornado   = ativar;
     item.dataEstorno = ativar ? dataEstorno : '';

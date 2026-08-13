@@ -25,19 +25,6 @@ function logout() {
   window.location.href = 'index.html';
 }
 
-async function apiCall(params) {
-  const url = new URL(CONFIG.APPS_SCRIPT_URL);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { redirect: 'follow' });
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    // Se não for JSON, provavelmente é página de login ou erro do Google
-    throw new Error('Servidor retornou resposta inválida. Verifique se o Apps Script está publicado como "Qualquer pessoa" (sem necessidade de login). Resposta: ' + text.slice(0, 200));
-  }
-}
-
 function formatCurrency(value) {
   return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

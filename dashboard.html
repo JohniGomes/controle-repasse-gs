@@ -243,7 +243,7 @@
   <div class="modal-overlay" id="modalEstorno" onclick="if(event.target===this)closeModal('modalEstorno')">
     <div class="modal-box" style="max-width:360px;width:95%">
       <h3>↩ Estorno de Glosa</h3>
-      <input type="hidden" id="estornoUid">
+      <input type="hidden" id="estornoId">
       <p style="font-size:.84rem;color:var(--text-muted);margin-bottom:1rem">
         Informe a data em que a glosa foi estornada (recebida).
       </p>
@@ -262,8 +262,7 @@
   <div class="modal-overlay" id="modalEditLancamento" onclick="if(event.target===this)closeModal('modalEditLancamento')">
     <div class="modal-box" style="max-width:520px;width:95%">
       <h3>Editar Lançamento</h3>
-      <input type="hidden" id="editLancUid">
-      <input type="hidden" id="editLancRow">
+      <input type="hidden" id="editLancId">
       <div class="form-row form-row-2" style="margin-bottom:.8rem">
         <div>
           <label class="form-label">Data</label>
@@ -329,20 +328,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-  <script src="js/config.js?v=7"></script>
-  <script src="js/utils.js?v=7"></script>
-  <script src="js/dashboard.js?v=48"></script>
-  <script>
-    // Popular select de procedimentos
-    document.addEventListener('DOMContentLoaded', () => {
-      const sel = document.getElementById('filterProcedimento');
-      PROCEDIMENTOS.forEach(p => {
-        const o = document.createElement('option');
-        o.value = p.nome; o.textContent = p.nome;
-        sel.appendChild(o);
-      });
-    });
-
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="js/supabaseApi.js"></script>
+  <script src="js/utils.js?v=8"></script>
+  <script src="js/dashboard.js?v=49"></script>
 </body>
 </html>

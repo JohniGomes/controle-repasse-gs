@@ -104,7 +104,7 @@
   <div class="modal-overlay" id="modalAddItem">
     <div class="modal-box">
       <h3 id="modalItemTitulo">Cadastrar Item</h3>
-      <input type="hidden" id="editRowIndex">
+      <input type="hidden" id="editItemId">
 
       <div class="form-group">
         <label class="form-label">Nome do Item *</label>
@@ -146,7 +146,7 @@
   <div class="modal-overlay" id="modalMovimentar">
     <div class="modal-box">
       <h3 id="modalMovTitulo">Movimentar Estoque</h3>
-      <input type="hidden" id="movRowIndex">
+      <input type="hidden" id="movItemId">
       <p id="movItemNome" style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem"></p>
 
       <div class="form-group">
@@ -193,9 +193,11 @@
     </div>
   </div>
 
-  <script src="js/config.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/estoque.js?v=3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="js/supabaseApi.js"></script>
+  <script src="js/utils.js?v=8"></script>
+  <script src="js/estoque.js?v=4"></script>
   <script>
     // Oculta botões de navegação para usuário com role estoque
     document.addEventListener('DOMContentLoaded', () => {

@@ -11,3 +11,9 @@ Controle Repasse/
 base de dados*
 LOGO*
 WhatsApp*
+
+# Migração Supabase — dados exportados (com dados reais de pacientes) e
+# credenciais nunca vão pro repo
+scripts/migracao-centrogs*.json
+scripts/node_modules/
+scripts/package-lock.json

@@ -4,7 +4,6 @@
 
 let dentistas = [];
 let convenios = [];
-let procedimentosCustom = [];
 let lancamentosExistentes = [];
 let allProcs = [];
 
@@ -26,20 +25,13 @@ function setDefaultDate() {
 }
 
 // ── Procedimentos ─────────────────────────────────────────────
+// Catálogo unificado (fixo + personalizado) vindo da tabela "procedimentos"
 async function loadProcedimentos() {
   try {
     const res = await apiCall({ action: 'getProcedimentos' });
-    procedimentosCustom = res.data || [];
-  } catch { /* usa só a lista estática */ }
-  buildProcList();
-}
-
-// Monta lista unificada: customizados no topo, fixos abaixo
-function buildProcList() {
-  allProcs = [
-    ...procedimentosCustom.map(p => ({ nome: p.nome, repasse: 0, id: p.id, isCustom: true })),
-    ...PROCEDIMENTOS.map(p => ({ nome: p.nome, repasse: p.repasse, id: null, isCustom: false }))
-  ];
+    if (res.error) { showToast('Erro ao carregar procedimentos: ' + res.error, 'error'); allProcs = []; }
+    else allProcs = res.data || []; // {id, nome, repasse, sistema}
+  } catch { allProcs = []; }
   renderProcDropdown(allProcs);
 }
 
@@ -51,13 +43,13 @@ function renderProcDropdown(items) {
   }
 
   let html = '';
-  const customItems = items.filter(p => p.isCustom);
-  const fixedItems  = items.filter(p => !p.isCustom);
+  const customItems = items.filter(p => !p.sistema);
+  const fixedItems  = items.filter(p => p.sistema);
 
   if (customItems.length) {
     html += '<div class="proc-group-label">Personalizados</div>';
     customItems.forEach(p => {
-      html += `<div class="proc-item" onmousedown="selectProc('${escHtml(p.nome)}', 0)">
+      html += `<div class="proc-item" onmousedown="selectProc('${escHtml(p.nome)}', ${p.repasse})">
         <span>${escHtml(p.nome)}</span>
         <button type="button" class="proc-del-btn" onmousedown="event.stopPropagation();deleteProcedimento('${p.id}','${escHtml(p.nome)}')" title="Excluir">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -110,8 +102,7 @@ async function addProcedimento() {
   try {
     const res = await apiCall({ action: 'addProcedimento', nome });
     if (res.error) { showToast(res.error, 'error'); return; }
-    procedimentosCustom.unshift({ id: res.id, nome: res.nome }); // topo
-    buildProcList();
+    await loadProcedimentos();
     selectProc(res.nome, 0);
     closeModal('modalAddProcedimento');
     showToast('Procedimento cadastrado!');
@@ -123,13 +114,12 @@ async function deleteProcedimento(id, nome) {
   try {
     const res = await apiCall({ action: 'deleteProcedimento', id });
     if (res.error) { showToast(res.error, 'error'); return; }
-    procedimentosCustom = procedimentosCustom.filter(p => p.id !== id);
     // Limpa seleção se era o que estava selecionado
     if (document.getElementById('procedimento').value === nome) {
       document.getElementById('procSearch').value   = '';
       document.getElementById('procedimento').value = '';
     }
-    buildProcList();
+    await loadProcedimentos();
     showToast('Procedimento excluído!');
   } catch { showToast('Erro ao excluir procedimento', 'error'); }
 }
@@ -330,7 +320,7 @@ async function salvarLancamento(e) {
   btn.innerHTML = '<span class="spinner"></span> Salvando...';
 
   try {
-    const res = await apiCall({ action: 'addLancamento', data: JSON.stringify(data) });
+    const res = await apiCall({ action: 'addLancamento', data });
     if (res.error) { showToast(res.error, 'error'); return; }
     lancamentosExistentes.push({ ...data });
     showToast('Lançamento salvo com sucesso!');

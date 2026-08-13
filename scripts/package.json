@@ -1,0 +1,9 @@
+{
+  "name": "centrogs-migration",
+  "private": true,
+  "type": "module",
+  "description": "Script one-off de migração de dados: Google Sheets → Supabase",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

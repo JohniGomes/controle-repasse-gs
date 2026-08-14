@@ -452,9 +452,18 @@ async function exportPDF() {
   const pendentes = filteredLancamentos.filter(l => !l.glosado && l.pendente);
   const estornados = filteredLancamentos.filter(l => l.estornado);
   const glosados  = filteredLancamentos.filter(l =>  l.glosado && !l.estornado);
-  const totalRep  = ativos.reduce((s, l) => s + getRepasse(l), 0);
+  const totalRepLancamentos = ativos.reduce((s, l) => s + getRepasse(l), 0);
 
   const totalGlosaPDF = glosados.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
+
+  // ── Metas do período (dentista filtrado, ou todas se "Todos") ─
+  const mesesAtivos = mesesFiltro.length ? new Set(mesesFiltro) : new Set(filteredLancamentos.map(l => String(l.data).slice(0,7)));
+  const dentFiltroPDF = document.getElementById('filterDentista').value;
+  const metasPDF = allMetas.filter(m => mesesAtivos.has(m.mes) && (!dentFiltroPDF || m.dentista === dentFiltroPDF));
+  const totalMetaValor = metasPDF.reduce((s, m) => s + (Number(m.metaValorRS) || 0), 0);
+
+  // Repasse final = repasse dos lançamentos + valor de meta batida no período
+  const totalRep = totalRepLancamentos + totalMetaValor;
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryRGB);
@@ -463,17 +472,17 @@ async function exportPDF() {
   if (estornados.length) subPDF.push(`${estornados.length} estorno${estornados.length > 1 ? 's' : ''}`);
   if (glosados.length)   subPDF.push(`${glosados.length} glosado${glosados.length > 1 ? 's' : ''}`);
   doc.text(`Total de Lançamentos: ${filteredLancamentos.length}${subPDF.length ? ` (${subPDF.join(', ')})` : ''}`, 200, 35);
-  doc.text(`Total Repasse: ${formatCurrency(totalRep)}`, 200, 41);
+  doc.text(
+    totalMetaValor
+      ? `Total Repasse: ${formatCurrency(totalRep)} (${formatCurrency(totalRepLancamentos)} + ${formatCurrency(totalMetaValor)} meta)`
+      : `Total Repasse: ${formatCurrency(totalRep)}`,
+    200, 41
+  );
   if (glosados.length) {
     doc.setTextColor(220, 38, 38);
     doc.text(`Total Glosado: ${formatCurrency(totalGlosaPDF)} (${glosados.length} lançamento${glosados.length > 1 ? 's' : ''})`, 200, 47);
     doc.setTextColor(...primaryRGB);
   }
-
-  // ── Metas do período (dentista filtrado, ou todas se "Todos") ─
-  const mesesAtivos = mesesFiltro.length ? new Set(mesesFiltro) : new Set(filteredLancamentos.map(l => String(l.data).slice(0,7)));
-  const dentFiltroPDF = document.getElementById('filterDentista').value;
-  const metasPDF = allMetas.filter(m => mesesAtivos.has(m.mes) && (!dentFiltroPDF || m.dentista === dentFiltroPDF));
 
   let metasStartY = glosados.length ? 58 : 52;
   if (metasPDF.length) {
@@ -574,7 +583,12 @@ async function exportPDF() {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
-  doc.text(`TOTAL REPASSE AO DENTISTA: ${formatCurrency(totalRep)}`, 148, finalY + 7.5, { align: 'center' });
+  doc.text(
+    totalMetaValor
+      ? `TOTAL REPASSE AO DENTISTA: ${formatCurrency(totalRep)}  (lançamentos ${formatCurrency(totalRepLancamentos)} + meta ${formatCurrency(totalMetaValor)})`
+      : `TOTAL REPASSE AO DENTISTA: ${formatCurrency(totalRep)}`,
+    148, finalY + 7.5, { align: 'center' }
+  );
 
   // ── Dados para emissão de NF (última página, abaixo do total) ─
   const pageH   = doc.internal.pageSize.height;

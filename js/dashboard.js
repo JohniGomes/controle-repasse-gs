@@ -84,6 +84,35 @@ function switchPeriod(type) {
   document.getElementById('periodReferencia').style.display = type === 'referencia' ? '' : 'none';
 }
 
+// Meses (YYYY-MM) relevantes ao período ATIVO no filtro — não aos
+// lançamentos existentes. Assim a Meta aparece mesmo sem nenhum
+// lançamento ainda no mês filtrado.
+function getPeriodMonths() {
+  const activePeriod = document.querySelector('.period-tab.active')?.dataset.type || 'month';
+
+  if (activePeriod === 'month') {
+    const m = document.getElementById('filterMonth').value;
+    return m ? [m] : [];
+  }
+
+  if (activePeriod === 'year') {
+    const y = document.getElementById('filterYear').value;
+    return y ? Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`) : [];
+  }
+
+  if (activePeriod === 'referencia') {
+    const ref = document.getElementById('filterRefMonth').value;
+    if (!ref) return [];
+    const [ry, rm] = ref.split('-').map(Number);
+    const pm = rm === 1 ? 12 : rm - 1; const py = rm === 1 ? ry - 1 : ry;
+    const cm = rm <= 2 ? rm + 10 : rm - 2; const cy = rm <= 2 ? ry - 1 : ry;
+    return [`${py}-${String(pm).padStart(2, '0')}`, `${cy}-${String(cm).padStart(2, '0')}`];
+  }
+
+  // Personalizado: sem mês único — usa os meses presentes nos lançamentos filtrados
+  return [...new Set(filteredLancamentos.map(l => String(l.data).slice(0, 7)))];
+}
+
 function applyFilters() {
   const dentista     = document.getElementById('filterDentista').value;
   const procedimento = document.getElementById('filterProcedimento').value;
@@ -174,10 +203,11 @@ function renderSummary() {
       ? `${glosadosAtivos.length} glosado${glosadosAtivos.length > 1 ? 's' : ''}${estornados.length ? ` · ${estornados.length} estornado${estornados.length > 1 ? 's' : ''}` : ''}`
       : estornados.length ? `${estornados.length} estorno${estornados.length > 1 ? 's' : ''} de glosa` : 'nenhum glosado';
 
-  // Metas do período filtrado
+  // Metas do período filtrado (pelo mês/ano/referência SELECIONADO no filtro,
+  // não pelas datas dos lançamentos — assim aparece mesmo sem lançamento ainda)
   const metaInfo   = document.getElementById('summaryMetaInfo');
   const dentFiltro = document.getElementById('filterDentista').value;
-  const mesesAtivos = new Set(filteredLancamentos.map(l => String(l.data).slice(0,7)));
+  const mesesAtivos = new Set(getPeriodMonths());
 
   const metasRel = allMetas.filter(m =>
     mesesAtivos.has(m.mes) && (!dentFiltro || m.dentista === dentFiltro)
@@ -254,6 +284,9 @@ function renderTable() {
       repasseCell = `<span style="white-space:nowrap"><span style="color:var(--danger);font-weight:700;text-decoration:line-through">${formatCurrency(l.repasse)}</span> <span class="badge badge-glosado" style="white-space:nowrap">GLOSADO</span></span>`;
     } else if (l.pendente) {
       repasseCell = `<span style="white-space:nowrap"><span style="color:#b45309;font-weight:700">${formatCurrency(getRepasse(l))}</span> <span style="display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.7rem;font-weight:700;background:#fef3c7;color:#b45309;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">⏸ PENDENTE</span></span>`;
+    } else if (isConvenio) {
+      // Convênio: repasse é sempre 35% do valor — não editável, evita erro de digitação
+      repasseCell = `<span style="color:var(--primary);font-weight:700" title="Repasse fixo de convênio (35% do valor) — não editável">${formatCurrency(getRepasse(l))}</span>`;
     } else {
       repasseCell = `<span class="repasse-valor" data-id="${l.id}" data-val="${l.repasse}"
               style="color:var(--primary);font-weight:700;cursor:pointer;border-bottom:1.5px dashed var(--primary)"
@@ -419,10 +452,9 @@ async function exportPDF() {
 
   const activePeriod = document.querySelector('.period-tab.active')?.dataset.type || 'month';
   let periodoStr = '';
-  let mesesFiltro = []; // meses YYYY-MM relevantes ao período, para casar com Metas
   if (activePeriod === 'month') {
     const m = document.getElementById('filterMonth').value;
-    if (m) { const [y, mo] = m.split('-'); periodoStr = `${mo}/${y}`; mesesFiltro = [m]; }
+    if (m) { const [y, mo] = m.split('-'); periodoStr = `${mo}/${y}`; }
   } else if (activePeriod === 'year') {
     periodoStr = document.getElementById('filterYear').value || 'Todos';
   } else if (activePeriod === 'referencia') {
@@ -433,7 +465,6 @@ async function exportPDF() {
       const cm = rm <= 2 ? rm + 10 : rm - 2; const cy = rm <= 2 ? ry - 1 : ry;
       const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       periodoStr = `Referência ${nomes[rm-1]}/${ry} (Part: ${nomes[pm-1]}/${py} | Conv: ${nomes[cm-1]}/${cy})`;
-      mesesFiltro = [`${py}-${String(pm).padStart(2,'0')}`, `${cy}-${String(cm).padStart(2,'0')}`];
     }
   } else {
     const f = document.getElementById('filterFrom').value;
@@ -457,7 +488,7 @@ async function exportPDF() {
   const totalGlosaPDF = glosados.reduce((s, l) => s + (Number(l.repasse) || 0), 0);
 
   // ── Metas do período (dentista filtrado, ou todas se "Todos") ─
-  const mesesAtivos = mesesFiltro.length ? new Set(mesesFiltro) : new Set(filteredLancamentos.map(l => String(l.data).slice(0,7)));
+  const mesesAtivos = new Set(getPeriodMonths());
   const dentFiltroPDF = document.getElementById('filterDentista').value;
   const metasPDF = allMetas.filter(m => mesesAtivos.has(m.mes) && (!dentFiltroPDF || m.dentista === dentFiltroPDF));
   const totalMetaValor = metasPDF.reduce((s, m) => s + (Number(m.metaValorRS) || 0), 0);
@@ -954,6 +985,25 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 function toggleEditConvenio() {
   const tipo = document.getElementById('editLancTipo').value;
   document.getElementById('editConvenioWrap').style.display = tipo === 'Convênio' ? '' : 'none';
+
+  const repasseInput = document.getElementById('editLancRepasse');
+  if (tipo === 'Convênio') {
+    // Repasse de convênio é sempre 35% do valor — trava o campo pra evitar erro de digitação
+    repasseInput.readOnly = true;
+    repasseInput.style.background = '#f2f2f2';
+    repasseInput.title = 'Repasse fixo de convênio (35% do valor) — não editável';
+    recalcEditRepasseConvenio();
+  } else {
+    repasseInput.readOnly = false;
+    repasseInput.style.background = '';
+    repasseInput.title = '';
+  }
+}
+
+function recalcEditRepasseConvenio() {
+  if (document.getElementById('editLancTipo').value !== 'Convênio') return;
+  const valor = parseFloat(document.getElementById('editLancValor').value) || 0;
+  document.getElementById('editLancRepasse').value = (Math.round(valor * 0.35 * 100) / 100).toFixed(2);
 }
 
 function openEditModal(id) {
@@ -978,15 +1028,19 @@ async function saveEditLancamento() {
   const id = document.getElementById('editLancId').value;
   if (!id) { showToast('Registro inválido', 'error'); return; }
 
+  const tipoEdit = document.getElementById('editLancTipo').value;
+  const valorEdit = parseFloat(document.getElementById('editLancValor').value) || 0;
+
   const data = {
     data:         document.getElementById('editLancData').value,
     dentista:     document.getElementById('editLancDentista').value.trim(),
     paciente:     document.getElementById('editLancPaciente').value.trim(),
     procedimento: document.getElementById('editLancProcedimento').value.trim(),
-    tipo:         document.getElementById('editLancTipo').value,
+    tipo:         tipoEdit,
     convenio:     document.getElementById('editLancConvenio').value.trim(),
-    valor:        parseFloat(document.getElementById('editLancValor').value) || 0,
-    repasse:      parseFloat(document.getElementById('editLancRepasse').value) || 0,
+    valor:        valorEdit,
+    // Convênio: repasse sempre 35% do valor, nunca aceita o que vier do campo (trava contra edição indevida)
+    repasse:      tipoEdit === 'Convênio' ? Math.round(valorEdit * 0.35 * 100) / 100 : (parseFloat(document.getElementById('editLancRepasse').value) || 0),
     dente:        document.getElementById('editLancDente').value.trim(),
     gto:          document.getElementById('editLancGto').value.trim()
   };

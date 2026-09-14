@@ -72,6 +72,23 @@ create trigger trg_lancamentos_updated_at
 before update on lancamentos
 for each row execute function set_updated_at();
 
+-- Convênio: repasse é sempre 35% do valor, travado no banco (não é
+-- uma sugestão da interface — nenhuma edição, por qualquer caminho,
+-- consegue gravar um valor diferente disso).
+create or replace function trava_repasse_convenio()
+returns trigger as $$
+begin
+  if new.tipo = 'Convênio' then
+    new.repasse = round(new.valor * 0.35, 2);
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_trava_repasse_convenio
+before insert or update on lancamentos
+for each row execute function trava_repasse_convenio();
+
 -- ── Metas Mensais ────────────────────────────────────────────
 create table metas (
   id                 uuid primary key default gen_random_uuid(),

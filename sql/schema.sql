@@ -53,11 +53,24 @@ create table lancamentos (
   pendente          boolean not null default false,
   estornado         boolean not null default false,
   data_estorno      date,
-  created_at        timestamptz not null default now()
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()  -- atualizado via trigger, ver abaixo
 );
 create index lancamentos_data_idx     on lancamentos (data);
 create index lancamentos_dentista_idx on lancamentos (dentista_id);
 create index lancamentos_tipo_idx     on lancamentos (tipo);
+
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_lancamentos_updated_at
+before update on lancamentos
+for each row execute function set_updated_at();
 
 -- ── Metas Mensais ────────────────────────────────────────────
 create table metas (

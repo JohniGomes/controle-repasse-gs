@@ -147,6 +147,7 @@ window.apiCall = (function () {
       valor:        Number(d.valor),
       repasse:      Number(d.repasse),
       timestamp:    d.created_at,
+      updatedAt:    d.updated_at || d.created_at,
       glosado:      d.glosado,
       dente:        d.dente || '',
       gto:          d.gto || '',

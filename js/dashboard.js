@@ -6,6 +6,8 @@ let allLancamentos = [];
 let filteredLancamentos = [];
 let chartInstances = {};
 let allMetas = [];
+let dentistasList = []; // cadastro oficial — usado no filtro e no modal de edição
+let conveniosList = [];
 const repasseEdits = new Map(); // id → valor editado pelo usuário
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -21,9 +23,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ── Carregamento de dados (1 única chamada) ───────────────────
 async function loadAllData() {
   try {
-    const [resL, resM] = await Promise.all([
+    const [resL, resM, resD, resC] = await Promise.all([
       apiCall({ action: 'getLancamentos' }),
-      apiCall({ action: 'getMetas' })
+      apiCall({ action: 'getMetas' }),
+      apiCall({ action: 'getDentistas' }),
+      apiCall({ action: 'getConvenios' })
     ]);
     if (resL.error) { showToast('Erro: ' + resL.error, 'error'); return; }
     allLancamentos = (resL.data || []).map(l => ({
@@ -32,6 +36,8 @@ async function loadAllData() {
     }));
     if (resM.error) { showToast('Erro ao carregar metas: ' + resM.error, 'error'); return; }
     allMetas = resM.data || [];
+    dentistasList = resD.data || [];
+    conveniosList = resC.data || [];
   } catch (e) {
     showToast('Erro de conexão: ' + (e.message || e), 'error');
   }
@@ -49,13 +55,13 @@ function normalizeDate(val, fallbackTimestamp) {
   return '';
 }
 
-// Popula filtros de dentista e convênio direto dos dados carregados
+// Popula filtro de dentista com o cadastro oficial (não com texto livre dos
+// lançamentos — evita duplicatas por grafia diferente, ex: "BIANCA"/"Bianca")
 function populateFiltersFromData() {
-  const dentistas = [...new Set(allLancamentos.map(l => l.dentista).filter(Boolean))].sort();
   const dSel = document.getElementById('filterDentista');
-  dentistas.forEach(d => {
+  [...dentistasList].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(d => {
     const o = document.createElement('option');
-    o.value = d; o.textContent = d; dSel.appendChild(o);
+    o.value = d.id; o.textContent = d.nome; dSel.appendChild(o);
   });
 
   const procedimentos = [...new Set(allLancamentos.map(l => l.procedimento).filter(Boolean))].sort();
@@ -113,6 +119,15 @@ function getPeriodMonths() {
   return [...new Set(filteredLancamentos.map(l => String(l.data).slice(0, 7)))];
 }
 
+// O filtro de dentista guarda o ID (para casar lançamentos com grafias
+// diferentes do mesmo nome) — aqui resolve pro nome, usado em Metas/PDF
+function getFilterDentistaNome() {
+  const id = document.getElementById('filterDentista').value;
+  if (!id) return '';
+  const d = dentistasList.find(x => x.id === id);
+  return d ? d.nome : '';
+}
+
 function applyFilters() {
   const dentista     = document.getElementById('filterDentista').value;
   const procedimento = document.getElementById('filterProcedimento').value;
@@ -123,7 +138,9 @@ function applyFilters() {
   const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
 
   filteredLancamentos = allLancamentos.filter(l => {
-    if (dentista     && l.dentista.trim()     !== dentista.trim())     return false;
+    // Filtro por ID do dentista (não por texto) — funciona mesmo com grafias
+    // diferentes do mesmo dentista em lançamentos antigos (ex: "BIANCA"/"Bianca")
+    if (dentista     && l.dentistaId !== dentista)                     return false;
     if (procedimento && l.procedimento.trim() !== procedimento.trim()) return false;
     if (convenio     && l.tipo.trim()         !== convenio.trim())     return false;
     if (search) {
@@ -206,7 +223,7 @@ function renderSummary() {
   // Metas do período filtrado (pelo mês/ano/referência SELECIONADO no filtro,
   // não pelas datas dos lançamentos — assim aparece mesmo sem lançamento ainda)
   const metaInfo   = document.getElementById('summaryMetaInfo');
-  const dentFiltro = document.getElementById('filterDentista').value;
+  const dentFiltro = getFilterDentistaNome();
   const mesesAtivos = new Set(getPeriodMonths());
 
   const metasRel = allMetas.filter(m =>
@@ -222,7 +239,7 @@ function renderSummary() {
     const realizados = filteredLancamentos.filter(l =>
       !l.glosado && !l.pendente &&
       l.tipo === 'Particular' &&
-      l.dentista === m.dentista &&
+      l.dentistaId === m.dentistaId &&
       String(l.data).slice(0,7) === m.mes
     ).length;
 
@@ -472,7 +489,7 @@ async function exportPDF() {
     periodoStr = `${f ? formatDate(f) : '...'} até ${t ? formatDate(t) : '...'}`;
   }
 
-  const dentista = document.getElementById('filterDentista').value || 'Todos';
+  const dentista = getFilterDentistaNome() || 'Todos';
   const geradoEm = new Date().toLocaleString('pt-BR');
 
   doc.text(`Período: ${periodoStr || 'Todos'}`, 14, 35);
@@ -489,7 +506,7 @@ async function exportPDF() {
 
   // ── Metas do período (dentista filtrado, ou todas se "Todos") ─
   const mesesAtivos = new Set(getPeriodMonths());
-  const dentFiltroPDF = document.getElementById('filterDentista').value;
+  const dentFiltroPDF = getFilterDentistaNome();
   const metasPDF = allMetas.filter(m => mesesAtivos.has(m.mes) && (!dentFiltroPDF || m.dentista === dentFiltroPDF));
   const totalMetaValor = metasPDF.reduce((s, m) => s + (Number(m.metaValorRS) || 0), 0);
 
@@ -1006,16 +1023,34 @@ function recalcEditRepasseConvenio() {
   document.getElementById('editLancRepasse').value = (Math.round(valor * 0.35 * 100) / 100).toFixed(2);
 }
 
+// Popula um <select> com o cadastro oficial; se o valor salvo não bater com
+// nenhuma opção (registro antigo com nome digitado errado), adiciona uma
+// opção extra sinalizada, pra deixar visível e forçar a correção consciente.
+function populateEditSelect(selectEl, lista, currentNome) {
+  selectEl.innerHTML = '<option value="">Selecione...</option>';
+  lista.forEach(item => {
+    const o = document.createElement('option');
+    o.value = item.nome; o.textContent = item.nome;
+    selectEl.appendChild(o);
+  });
+  if (currentNome && !lista.some(item => item.nome === currentNome)) {
+    const o = document.createElement('option');
+    o.value = currentNome; o.textContent = `⚠ ${currentNome} (não cadastrado — corrija)`;
+    selectEl.appendChild(o);
+  }
+  selectEl.value = currentNome || '';
+}
+
 function openEditModal(id) {
   const l = allLancamentos.find(x => x.id === id);
   if (!l) return;
   document.getElementById('editLancId').value          = id;
   document.getElementById('editLancData').value        = l.data ? l.data.slice(0,10) : '';
-  document.getElementById('editLancDentista').value    = l.dentista || '';
+  populateEditSelect(document.getElementById('editLancDentista'), dentistasList, l.dentista);
   document.getElementById('editLancPaciente').value    = l.paciente || '';
   document.getElementById('editLancProcedimento').value= l.procedimento || '';
   document.getElementById('editLancTipo').value        = l.tipo || 'Particular';
-  document.getElementById('editLancConvenio').value    = l.convenio || '';
+  populateEditSelect(document.getElementById('editLancConvenio'), conveniosList, l.convenio);
   document.getElementById('editLancValor').value       = l.valor || '';
   document.getElementById('editLancRepasse').value     = l.repasse || '';
   document.getElementById('editLancDente').value       = l.dente || '';

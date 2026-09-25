@@ -138,6 +138,7 @@ window.apiCall = (function () {
   function mapLancamento(d) {
     return {
       id:           d.id,
+      dentistaId:   d.dentista_id,
       data:         d.data,
       dentista:     d.dentista_nome,
       paciente:     d.paciente,
@@ -251,6 +252,7 @@ window.apiCall = (function () {
   function mapMeta(m) {
     return {
       id:          m.id,
+      dentistaId:  m.dentista_id,
       mes:         m.mes,
       dentista:    m.dentista_nome,
       meta:        m.meta_particulares ?? '',

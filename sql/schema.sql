@@ -89,6 +89,47 @@ create trigger trg_trava_repasse_convenio
 before insert or update on lancamentos
 for each row execute function trava_repasse_convenio();
 
+-- Histórico completo e imutável de todas as edições em lancamentos
+-- (criação, alteração, exclusão) — guarda o estado antes/depois de cada
+-- mudança para sempre, para auditoria. A role anon só tem permissão de
+-- leitura; só o trigger (security definer) consegue gravar.
+create table lancamentos_historico (
+  id             uuid primary key default gen_random_uuid(),
+  lancamento_id  uuid not null,
+  operacao       text not null check (operacao in ('INSERT','UPDATE','DELETE')),
+  dados_antigos  jsonb,
+  dados_novos    jsonb,
+  alterado_em    timestamptz not null default now()
+);
+create index lancamentos_historico_lanc_idx on lancamentos_historico (lancamento_id);
+create index lancamentos_historico_data_idx on lancamentos_historico (alterado_em);
+
+alter table lancamentos_historico enable row level security;
+create policy anon_select on lancamentos_historico for select using (true);
+
+create or replace function log_lancamento_historico()
+returns trigger as $$
+begin
+  if (tg_op = 'INSERT') then
+    insert into lancamentos_historico (lancamento_id, operacao, dados_antigos, dados_novos)
+    values (new.id, 'INSERT', null, to_jsonb(new));
+    return new;
+  elsif (tg_op = 'UPDATE') then
+    insert into lancamentos_historico (lancamento_id, operacao, dados_antigos, dados_novos)
+    values (new.id, 'UPDATE', to_jsonb(old), to_jsonb(new));
+    return new;
+  elsif (tg_op = 'DELETE') then
+    insert into lancamentos_historico (lancamento_id, operacao, dados_antigos, dados_novos)
+    values (old.id, 'DELETE', to_jsonb(old), null);
+    return old;
+  end if;
+end;
+$$ language plpgsql security definer;
+
+create trigger trg_lancamentos_historico
+after insert or update or delete on lancamentos
+for each row execute function log_lancamento_historico();
+
 -- ── Metas Mensais ────────────────────────────────────────────
 create table metas (
   id                 uuid primary key default gen_random_uuid(),

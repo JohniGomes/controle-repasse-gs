@@ -24,13 +24,31 @@ window.apiCall = (function () {
     try { return sessionStorage.getItem('cgs_user') || null; } catch { return null; }
   }
 
+  // Token da sessão (verificado no banco nas funções de administração)
+  function token() {
+    try { return sessionStorage.getItem('cgs_token') || null; } catch { return null; }
+  }
+
   async function apiCall(params) {
     const { action, ...p } = params;
     try {
       switch (action) {
         case 'login':             return await login(p.usuario, p.senha);
         case 'criarUsuario':      return await criarUsuario(p.nome, p.usuario, p.senha, p.codigo);
-        case 'alterarSenha':      return await rpcJson('alterar_senha',   { p_usuario: p.usuario, p_senha_atual: p.senhaAtual, p_senha_nova: p.senhaNova });
+        // Administração de usuários (só master — o banco confere o token)
+        case 'listarUsuarios': {
+          if (!token()) return { error: 'Sessão expirada — entre novamente' };
+          const { data, error } = await sb.rpc('listar_usuarios', { p_token: token() });
+          if (error) return { error: error.message.includes('Acesso negado') ? 'Acesso negado — entre novamente' : error.message };
+          return { success: true, data };
+        }
+        case 'definirAtivoUsuario':    return await rpcJson('definir_ativo_usuario',    { p_token: token(), p_id: p.id, p_ativo: p.ativo });
+        case 'definirPapelUsuario':    return await rpcJson('definir_papel_usuario',    { p_token: token(), p_id: p.id, p_papel: p.papel });
+        case 'redefinirSenhaUsuario':  return await rpcJson('redefinir_senha_usuario',  { p_token: token(), p_id: p.id, p_senha_nova: p.senhaNova });
+        case 'obterCodigoClinica':     return await rpcJson('obter_codigo_clinica',     { p_token: token() });
+        case 'definirCodigoClinica':   return await rpcJson('definir_codigo_clinica',   { p_token: token(), p_codigo: p.codigo });
+
+        case 'alterarSenha':     return await rpcJson('alterar_senha',   { p_usuario: p.usuario, p_senha_atual: p.senhaAtual, p_senha_nova: p.senhaNova });
         case 'redefinirSenha':    return await rpcJson('redefinir_senha', { p_usuario: p.usuario, p_codigo: p.codigo, p_senha_nova: p.senhaNova });
 
         case 'getDentistas':      return await getDentistas();

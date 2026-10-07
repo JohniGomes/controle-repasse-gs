@@ -151,7 +151,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js?v=4"></script>
-  <script src="js/supabaseApi.js?v=7"></script>
+  <script src="js/supabaseApi.js?v=8"></script>
   <script>
     const ROLE_HOME = { master: 'lancamento.html', recepcao: 'lancamento.html', estoque: 'estoque.html' };
 
@@ -250,6 +250,7 @@
       sessionStorage.setItem('cgs_role', res.usuario.papel);
       sessionStorage.setItem('cgs_user', res.usuario.usuario);
       sessionStorage.setItem('cgs_nome', res.usuario.nome);
+      sessionStorage.setItem('cgs_token', res.usuario.token);
       window.location.href = ROLE_HOME[res.usuario.papel];
     });
 

@@ -7,7 +7,7 @@
 //   recepcao → só lançamento e dashboard
 //   estoque  → só estoque
 const ROLE_PAGES = {
-  master:   ['lancamento.html', 'dashboard.html', 'estoque.html'],
+  master:   ['lancamento.html', 'dashboard.html', 'estoque.html', 'usuarios.html'],
   recepcao: ['lancamento.html', 'dashboard.html'],
   estoque:  ['estoque.html']
 };
@@ -44,7 +44,7 @@ function getUserRole() {
 }
 
 function logout() {
-  ['cgs_auth', 'cgs_role', 'cgs_user', 'cgs_nome'].forEach(k => sessionStorage.removeItem(k));
+  ['cgs_auth', 'cgs_role', 'cgs_user', 'cgs_nome', 'cgs_token'].forEach(k => sessionStorage.removeItem(k));
   window.location.href = 'index.html';
 }
 

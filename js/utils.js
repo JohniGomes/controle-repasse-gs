@@ -2,26 +2,49 @@
 // Utilitários compartilhados entre todas as páginas
 // ============================================================
 
+// Páginas liberadas por papel
+//   master   → tudo
+//   recepcao → só lançamento e dashboard
+//   estoque  → só estoque
+const ROLE_PAGES = {
+  master:   ['lancamento.html', 'dashboard.html', 'estoque.html'],
+  recepcao: ['lancamento.html', 'dashboard.html'],
+  estoque:  ['estoque.html']
+};
+
+function homeForRole(role) {
+  return role === 'estoque' ? 'estoque.html' : 'lancamento.html';
+}
+
 function checkAuth() {
   const auth = sessionStorage.getItem('cgs_auth');
   if (!auth) { window.location.href = 'index.html'; return; }
 
-  const role    = sessionStorage.getItem('cgs_role') || 'admin';
+  const role    = sessionStorage.getItem('cgs_role');
   const current = location.pathname.split('/').pop() || 'index.html';
+  const allowed = ROLE_PAGES[role];
 
-  // Usuário estoque só pode ver estoque.html
-  if (role === 'estoque' && current !== 'estoque.html') {
-    window.location.href = 'estoque.html';
+  // Sessão sem papel válido (ex: login antigo) → pede login de novo
+  if (!allowed) { logout(); return; }
+
+  // Página não liberada pro papel → manda pra tela inicial dele
+  if (!allowed.includes(current)) {
+    window.location.href = homeForRole(role);
+    return;
   }
+
+  // Esconde itens de menu que o papel não pode usar (data-hide-for="recepcao")
+  document.querySelectorAll('[data-hide-for]').forEach(el => {
+    if (el.dataset.hideFor.split(',').includes(role)) el.style.display = 'none';
+  });
 }
 
 function getUserRole() {
-  return sessionStorage.getItem('cgs_role') || 'admin';
+  return sessionStorage.getItem('cgs_role') || '';
 }
 
 function logout() {
-  sessionStorage.removeItem('cgs_auth');
-  sessionStorage.removeItem('cgs_role');
+  ['cgs_auth', 'cgs_role', 'cgs_user', 'cgs_nome'].forEach(k => sessionStorage.removeItem(k));
   window.location.href = 'index.html';
 }
 

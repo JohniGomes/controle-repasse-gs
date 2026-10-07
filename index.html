@@ -13,6 +13,13 @@
       border-radius: 8px; padding: .65rem 1rem; font-size: .84rem;
       margin-bottom: 1rem; display: none;
     }
+    .login-link { color: #1F3140; text-decoration: underline; cursor: pointer; }
+    .login-link:hover { color: #011526; }
+    .login-ok {
+      background: #dcfce7; border: 1px solid #86efac; color: #166534;
+      border-radius: 8px; padding: .65rem 1rem; font-size: .84rem;
+      margin-bottom: 1rem; display: none;
+    }
   </style>
 </head>
 <body>
@@ -24,7 +31,9 @@
       <p>Sistema de Controle de Repasse</p>
 
       <div class="login-error" id="loginError">Usuário ou senha incorretos.</div>
+      <div class="login-ok" id="loginOk"></div>
 
+      <!-- Entrar -->
       <form id="loginForm" autocomplete="off">
         <div class="form-group" style="text-align:left">
           <label class="form-label">Usuário</label>
@@ -37,6 +46,101 @@
         <button type="submit" class="btn btn-primary btn-full" id="btnLogin" style="margin-top:.5rem; padding:.7rem; font-size:.95rem;">
           Entrar
         </button>
+        <button type="button" class="btn btn-outline btn-full" onclick="showRegister(true)" style="margin-top:.6rem; padding:.6rem; font-size:.85rem;">
+          Criar usuário
+        </button>
+        <div style="margin-top:.9rem; display:flex; justify-content:space-between; font-size:.8rem;">
+          <a href="#" class="login-link" onclick="showView('forgot'); return false;">Esqueci a senha</a>
+          <a href="#" class="login-link" onclick="showView('change'); return false;">Alterar senha</a>
+        </div>
+      </form>
+
+      <!-- Esqueci a senha (só contas de recepção) -->
+      <form id="forgotForm" autocomplete="off" style="display:none">
+        <p style="font-size:.8rem; color:#6b7280; margin-bottom:1rem; text-align:left">
+          Informe seu usuário, o <strong>código da clínica</strong> (peça à administração) e crie uma nova senha.
+        </p>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Usuário</label>
+          <input type="text" id="fgUsuario" class="form-control" placeholder="Seu usuário" autocomplete="off" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Código da clínica</label>
+          <input type="password" id="fgCodigo" class="form-control" placeholder="Fornecido pela administração" autocomplete="off" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Nova senha</label>
+          <input type="password" id="fgSenha" class="form-control" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Repita a nova senha</label>
+          <input type="password" id="fgSenha2" class="form-control" placeholder="Repita a nova senha" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="btnForgot" style="margin-top:.5rem; padding:.7rem; font-size:.95rem;">
+          Redefinir senha
+        </button>
+        <button type="button" class="btn btn-outline btn-full" onclick="showView('login')" style="margin-top:.6rem; padding:.6rem; font-size:.85rem;">
+          Voltar ao login
+        </button>
+      </form>
+
+      <!-- Alterar senha -->
+      <form id="changeForm" autocomplete="off" style="display:none">
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Usuário</label>
+          <input type="text" id="chUsuario" class="form-control" placeholder="Seu usuário" autocomplete="username" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Senha atual</label>
+          <input type="password" id="chAtual" class="form-control" placeholder="Sua senha atual" autocomplete="current-password" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Nova senha</label>
+          <input type="password" id="chNova" class="form-control" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Repita a nova senha</label>
+          <input type="password" id="chNova2" class="form-control" placeholder="Repita a nova senha" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="btnChange" style="margin-top:.5rem; padding:.7rem; font-size:.95rem;">
+          Alterar senha
+        </button>
+        <button type="button" class="btn btn-outline btn-full" onclick="showView('login')" style="margin-top:.6rem; padding:.6rem; font-size:.85rem;">
+          Voltar ao login
+        </button>
+      </form>
+
+      <!-- Criar usuário -->
+      <form id="registerForm" autocomplete="off" style="display:none">
+        <p style="font-size:.8rem; color:#6b7280; margin-bottom:1rem; text-align:left">
+          Cadastre seu acesso pessoal. Você vai precisar do <strong>código da clínica</strong> (peça à administração).
+        </p>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Nome completo</label>
+          <input type="text" id="regNome" class="form-control" placeholder="Seu nome" autocomplete="off" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Usuário</label>
+          <input type="text" id="regUsuario" class="form-control" placeholder="Ex: maria.silva" autocomplete="off" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Senha</label>
+          <input type="password" id="regSenha" class="form-control" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Repita a senha</label>
+          <input type="password" id="regSenha2" class="form-control" placeholder="Repita a senha" autocomplete="new-password" required>
+        </div>
+        <div class="form-group" style="text-align:left">
+          <label class="form-label">Código da clínica</label>
+          <input type="password" id="regCodigo" class="form-control" placeholder="Fornecido pela administração" autocomplete="off" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="btnRegister" style="margin-top:.5rem; padding:.7rem; font-size:.95rem;">
+          Criar usuário
+        </button>
+        <button type="button" class="btn btn-outline btn-full" onclick="showRegister(false)" style="margin-top:.6rem; padding:.6rem; font-size:.85rem;">
+          Voltar ao login
+        </button>
       </form>
 
       <p style="margin-top:1.5rem; font-size:.72rem; color:#9ca3af;">
@@ -46,38 +150,136 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=3"></script>
-  <script src="js/supabaseApi.js?v=5"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/supabaseApi.js?v=7"></script>
   <script>
-    // Já logado? Redireciona conforme role
-    if (sessionStorage.getItem('cgs_auth')) {
-      const role = sessionStorage.getItem('cgs_role') || 'admin';
-      window.location.href = role === 'estoque' ? 'estoque.html' : 'lancamento.html';
+    const ROLE_HOME = { master: 'lancamento.html', recepcao: 'lancamento.html', estoque: 'estoque.html' };
+
+    // Já logado? Vai direto pra tela inicial do papel
+    if (sessionStorage.getItem('cgs_auth') && ROLE_HOME[sessionStorage.getItem('cgs_role')]) {
+      window.location.href = ROLE_HOME[sessionStorage.getItem('cgs_role')];
     }
 
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
+    const errBox = document.getElementById('loginError');
+    const okBox  = document.getElementById('loginOk');
+
+    function showError(msg) { okBox.style.display = 'none'; errBox.textContent = msg; errBox.style.display = 'block'; }
+    function showOk(msg)    { errBox.style.display = 'none'; okBox.textContent = msg;  okBox.style.display = 'block'; }
+    function clearMsgs()    { errBox.style.display = 'none'; okBox.style.display = 'none'; }
+
+    const VIEWS = { login: 'loginForm', register: 'registerForm', forgot: 'forgotForm', change: 'changeForm' };
+
+    function showView(name) {
+      clearMsgs();
+      Object.entries(VIEWS).forEach(([k, id]) => {
+        document.getElementById(id).style.display = k === name ? '' : 'none';
+      });
+    }
+    function showRegister(show) { showView(show ? 'register' : 'login'); }
+
+    // Esqueci a senha
+    document.getElementById('forgotForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+      const btn = document.getElementById('btnForgot');
+      const usuario = document.getElementById('fgUsuario').value.trim();
+      const senha   = document.getElementById('fgSenha').value;
+
+      clearMsgs();
+      if (senha !== document.getElementById('fgSenha2').value) { showError('As senhas não conferem'); return; }
+
+      btn.innerHTML = '<span class="spinner"></span>';
+      btn.disabled = true;
+      const res = await apiCall({ action: 'redefinirSenha', usuario, codigo: document.getElementById('fgCodigo').value, senhaNova: senha });
+      btn.innerHTML = 'Redefinir senha';
+      btn.disabled = false;
+
+      if (res.error) { showError(res.error); return; }
+      document.getElementById('forgotForm').reset();
+      showView('login');
+      document.getElementById('username').value = usuario.toLowerCase();
+      document.getElementById('password').focus();
+      showOk('Senha redefinida! Entre com a nova senha.');
+    });
+
+    // Alterar senha
+    document.getElementById('changeForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnChange');
+      const usuario = document.getElementById('chUsuario').value.trim();
+      const nova    = document.getElementById('chNova').value;
+
+      clearMsgs();
+      if (nova !== document.getElementById('chNova2').value) { showError('As senhas não conferem'); return; }
+
+      btn.innerHTML = '<span class="spinner"></span>';
+      btn.disabled = true;
+      const res = await apiCall({ action: 'alterarSenha', usuario, senhaAtual: document.getElementById('chAtual').value, senhaNova: nova });
+      btn.innerHTML = 'Alterar senha';
+      btn.disabled = false;
+
+      if (res.error) { showError(res.error); return; }
+      document.getElementById('changeForm').reset();
+      showView('login');
+      document.getElementById('username').value = usuario.toLowerCase();
+      document.getElementById('password').focus();
+      showOk('Senha alterada! Entre com a nova senha.');
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnLogin');
       const u = document.getElementById('username').value.trim();
       const p = document.getElementById('password').value;
-      const err = document.getElementById('loginError');
-      const btn = document.getElementById('btnLogin');
 
-      let role = null;
-      if (u === CONFIG.USERNAME && p === CONFIG.PASSWORD)               role = 'admin';
-      else if (u === CONFIG.ESTOQUE_USERNAME && p === CONFIG.ESTOQUE_PASSWORD) role = 'estoque';
+      clearMsgs();
+      btn.innerHTML = '<span class="spinner"></span>';
+      btn.disabled = true;
 
-      if (role) {
-        err.style.display = 'none';
-        btn.innerHTML = '<span class="spinner"></span>';
-        btn.disabled = true;
-        sessionStorage.setItem('cgs_auth', '1');
-        sessionStorage.setItem('cgs_role', role);
-        setTimeout(() => window.location.href = role === 'estoque' ? 'estoque.html' : 'lancamento.html', 600);
-      } else {
-        err.style.display = 'block';
+      const res = await apiCall({ action: 'login', usuario: u, senha: p });
+
+      if (res.error || !res.usuario || !ROLE_HOME[res.usuario.papel]) {
+        showError(res.error || 'Usuário ou senha incorretos');
+        btn.innerHTML = 'Entrar';
+        btn.disabled = false;
         document.getElementById('password').value = '';
         document.getElementById('password').focus();
+        return;
       }
+
+      sessionStorage.setItem('cgs_auth', '1');
+      sessionStorage.setItem('cgs_role', res.usuario.papel);
+      sessionStorage.setItem('cgs_user', res.usuario.usuario);
+      sessionStorage.setItem('cgs_nome', res.usuario.nome);
+      window.location.href = ROLE_HOME[res.usuario.papel];
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnRegister');
+      const nome    = document.getElementById('regNome').value.trim();
+      const usuario = document.getElementById('regUsuario').value.trim();
+      const senha   = document.getElementById('regSenha').value;
+      const senha2  = document.getElementById('regSenha2').value;
+      const codigo  = document.getElementById('regCodigo').value;
+
+      clearMsgs();
+      if (senha !== senha2) { showError('As senhas não conferem'); return; }
+
+      btn.innerHTML = '<span class="spinner"></span>';
+      btn.disabled = true;
+
+      const res = await apiCall({ action: 'criarUsuario', nome, usuario, senha, codigo });
+
+      btn.innerHTML = 'Criar usuário';
+      btn.disabled = false;
+
+      if (res.error) { showError(res.error); return; }
+
+      document.getElementById('registerForm').reset();
+      showRegister(false);
+      document.getElementById('username').value = usuario.toLowerCase();
+      document.getElementById('password').focus();
+      showOk('Usuário criado! Entre com seu usuário e senha.');
     });
   </script>
 </body>

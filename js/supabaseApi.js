@@ -19,10 +19,20 @@ window.apiCall = (function () {
     return { error: `Já existe ${entidade} com esse nome` };
   }
 
+  // Usuário logado (gravado em lancamentos.alterado_por pra auditoria)
+  function actor() {
+    try { return sessionStorage.getItem('cgs_user') || null; } catch { return null; }
+  }
+
   async function apiCall(params) {
     const { action, ...p } = params;
     try {
       switch (action) {
+        case 'login':             return await login(p.usuario, p.senha);
+        case 'criarUsuario':      return await criarUsuario(p.nome, p.usuario, p.senha, p.codigo);
+        case 'alterarSenha':      return await rpcJson('alterar_senha',   { p_usuario: p.usuario, p_senha_atual: p.senhaAtual, p_senha_nova: p.senhaNova });
+        case 'redefinirSenha':    return await rpcJson('redefinir_senha', { p_usuario: p.usuario, p_codigo: p.codigo, p_senha_nova: p.senhaNova });
+
         case 'getDentistas':      return await getDentistas();
         case 'addDentista':       return await addDentista(p.nome);
         case 'deleteDentista':    return await deleteDentista(p.id);
@@ -59,6 +69,29 @@ window.apiCall = (function () {
     } catch (err) {
       return { error: err.message || String(err) };
     }
+  }
+
+  // ── Autenticação (verificada no banco, via funções RPC) ───────
+  async function login(usuario, senha) {
+    if (!usuario || !senha) return { error: 'Informe usuário e senha' };
+    const { data, error } = await sb.rpc('login_usuario', { p_usuario: usuario, p_senha: senha });
+    if (error) return { error: error.message };
+    if (!data || !data.length) return { error: 'Usuário ou senha incorretos' };
+    return { success: true, usuario: data[0] };
+  }
+
+  async function rpcJson(fn, args) {
+    const { data, error } = await sb.rpc(fn, args);
+    if (error) return { error: error.message };
+    return data;
+  }
+
+  async function criarUsuario(nome, usuario, senha, codigo) {
+    const { data, error } = await sb.rpc('criar_usuario', {
+      p_nome: nome, p_usuario: usuario, p_senha: senha, p_codigo: codigo
+    });
+    if (error) return { error: error.message };
+    return data;
   }
 
   // ── Dentistas ────────────────────────────────────────────────
@@ -138,6 +171,7 @@ window.apiCall = (function () {
   function mapLancamento(d) {
     return {
       id:           d.id,
+      alteradoPor:  d.alterado_por || '',
       dentistaId:   d.dentista_id,
       data:         d.data,
       dentista:     d.dentista_nome,
@@ -189,7 +223,8 @@ window.apiCall = (function () {
       valor:             Number(l.valor) || 0,
       repasse:           Number(l.repasse) || 0,
       dente:             l.dente || '',
-      gto:               l.gto || ''
+      gto:               l.gto || '',
+      alterado_por:      actor()
     }).select('id').single();
     if (error) return { error: error.message };
     return { success: true, id: data.id };
@@ -208,26 +243,29 @@ window.apiCall = (function () {
       valor:             Number(l.valor) || 0,
       repasse:           Number(l.repasse) || 0,
       dente:             l.dente || '',
-      gto:               l.gto || ''
+      gto:               l.gto || '',
+      alterado_por:      actor()
     }).eq('id', id);
     if (error) return { error: error.message };
     return { success: true };
   }
 
   async function deleteLancamento(id) {
+    // Marca quem excluiu antes de apagar — o histórico guarda a linha com esse campo
+    await sb.from('lancamentos').update({ alterado_por: actor() }).eq('id', id);
     const { error } = await sb.from('lancamentos').delete().eq('id', id);
     if (error) return { error: error.message };
     return { success: true };
   }
 
   async function updateGlosa(id, glosado) {
-    const { error } = await sb.from('lancamentos').update({ glosado: glosado === true || glosado === 'true' }).eq('id', id);
+    const { error } = await sb.from('lancamentos').update({ glosado: glosado === true || glosado === 'true', alterado_por: actor() }).eq('id', id);
     if (error) return { error: error.message };
     return { success: true };
   }
 
   async function updatePendente(id, pendente) {
-    const { error } = await sb.from('lancamentos').update({ pendente: pendente === true || pendente === 'true' }).eq('id', id);
+    const { error } = await sb.from('lancamentos').update({ pendente: pendente === true || pendente === 'true', alterado_por: actor() }).eq('id', id);
     if (error) return { error: error.message };
     return { success: true };
   }
@@ -236,14 +274,15 @@ window.apiCall = (function () {
     const ativo = estornado === true || estornado === 'true';
     const { error } = await sb.from('lancamentos').update({
       estornado: ativo,
-      data_estorno: ativo ? (dataEstorno || null) : null
+      data_estorno: ativo ? (dataEstorno || null) : null,
+      alterado_por: actor()
     }).eq('id', id);
     if (error) return { error: error.message };
     return { success: true };
   }
 
   async function updateRepasse(id, repasse) {
-    const { error } = await sb.from('lancamentos').update({ repasse: Number(repasse) || 0 }).eq('id', id);
+    const { error } = await sb.from('lancamentos').update({ repasse: Number(repasse) || 0, alterado_por: actor() }).eq('id', id);
     if (error) return { error: error.message };
     return { success: true };
   }

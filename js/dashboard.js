@@ -1089,7 +1089,17 @@ async function saveEditLancamento() {
     if (res.error) { showToast(res.error, 'error'); return; }
     // Atualiza in-memory
     const item = allLancamentos.find(x => x.id === id);
-    if (item) Object.assign(item, data);
+    if (item) {
+      const dentistaMudou = item.dentista !== data.dentista;
+      Object.assign(item, data);
+      // O filtro de dentista usa o ID, não o nome — se o dentista mudou, o vínculo
+      // em memória precisa acompanhar, senão a linha continua no filtro do dentista antigo
+      if (dentistaMudou) {
+        const dent = dentistasList.find(d => d.nome === data.dentista);
+        item.dentistaId = dent ? dent.id : null;
+      }
+      item.alteradoPor = sessionStorage.getItem('cgs_user') || '';
+    }
     closeModal('modalEditLancamento');
     applyFilters();
     showToast('Lançamento atualizado!');
